@@ -27,8 +27,8 @@ module.exports = {
         var obj = fake(['on', 'setEncoding', 'connect', 'write']);
         var irc = new IRC(obj);
         var eventEmitted = false;
-        irc.on('ping', function() {
-            eventEmitted = true;
+        irc.on('ping', function(from) {
+            if (from == 'irc.foo.bar') eventEmitted = true;
         });
         data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
         data('PING :irc.foo.bar\r\n');

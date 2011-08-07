@@ -1,30 +1,57 @@
-exports.fake = function(methods) {
+exports.fake = function(source) {
     var object = {};
-    methods.forEach(function(name, i) {
-        object[name] = function() {
-            object[name].history.push(arguments);
-            if (object[name].nextHandler.length > 0) {
-                handler = object[name].nextHandler.pop();
-                return handler.apply(this, arguments);
-            }
+    var methods = [];
+    if (Object.prototype.toString.call(source) === '[object Object]') {
+        var names = Object.getOwnPropertyNames(source);
+        for (var i in names) {
+            var member = source[names[i]];
+            if (typeof member === 'function') methods.push(names[i]);
         }
-        Object.defineProperty(object[name], "history", {
+    }
+    else if (Object.prototype.toString.call(source) === '[object Array]') {
+        methods = source;
+    }
+    methods.forEach(function(name, i) {
+        Object.defineProperty(object, name, {
             enumerable: false,
-            value: []
+            value: function() {
+                object[name].history.push(arguments);
+                if (object[name].nextHandler.length > 0) {
+                    handler = object[name].nextHandler.pop();
+                    return handler.apply(this, arguments);
+                }
+                return object[name].defaultReturnValue;
+            }
         });
-        Object.defineProperty(object[name], "nextHandler", {
-            enumerable: false,
-            value: []
-        });
-        Object.defineProperty(object[name], "next", {
-            enumerable: false,
-            value: function(handler) {
-                object[name].nextHandler.push(handler);
+        Object.defineProperties(object[name], {
+            history: {
+                enumerable: false,
+                value: []
+            },
+            nextHandler: {
+                enumerable: false,
+                value: []
+            },
+            next: {
+                enumerable: false,
+                value: function(handler) {
+                    object[name].nextHandler.push(handler);
+                }
+            },
+            returns: {
+                enumerable: false,
+                value: function(value) {
+                    object[name].defaultReturnValue = value;
+                }
             }
         });
     });
     return object;
 }
+// var fakeSocket = exports.fake(require('net').Socket.prototype);
+// console.log(fakeSocket);
+// fakeSocket.connect.returns('hi');
+// console.log(fakeSocket.connect());
 /*
 var obj = fake(['on', 'setEncoding', 'connect', 'write']);
 console.log(obj.connect.history);

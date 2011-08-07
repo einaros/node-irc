@@ -27,7 +27,7 @@ var messageHandlers = {
     },
     'PING': function(from) {
         // PING :irc.homelien.no
-        this.emit('ping', from);
+        this.emit('ping', from.substr(1));
         this.sock.write('PONG ' + from + '\r\n');
     }
 }
