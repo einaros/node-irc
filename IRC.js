@@ -47,6 +47,9 @@ public(IRC.prototype, {
     privmsg: function(to, message) {
         this._socket.write('PRIVMSG ' + to + ' :' + message + '\r\n');
     },
+    ping: function(to) {
+        this._socket.write('PRIVMSG ' + to + ' :\1PING ' + Date.now() + '\1\r\n');
+    },
     quit: function(message) {
         this._socket.write('QUIT :' + message + '\r\n');
         this._socket.close()
