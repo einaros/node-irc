@@ -89,6 +89,11 @@ private(IRC.prototype, {
             var identity = parseIdentity(from);
             this.emit('ping-reply', identity.nick, Date.now() - Number(data));
         },
+        // 'CTCP_PRIVMSG_ACTION': function(from, to, data) {
+        //     //:einar_!~einar@cypher.itu.dk PRIVMSG undefined :ACTION laks
+        //     var identity = parseIdentity(from);
+        //     this.emit('action', identity.nick);            
+        // }
     },
     _processServerMessage: function(line) {
         // :Angel!foo@bar PRIVMSG Wiz :\1PING 123 123
