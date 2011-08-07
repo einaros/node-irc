@@ -30,7 +30,16 @@ function IRC(server, port) {
         console.log('server socket error');
         console.log(exception);
     }));
+    var overflow = '';
     this._socket.on('data', delegate(this, function(data) {
+        data = overflow + data;
+        var lastCrlf = data.lastIndexOf('\r\n');
+        if (lastCrlf == -1) {
+            overflow = data;
+            return;
+        }
+        overflow = data.substr(lastCrlf + 2);
+        data = data.substr(0, lastCrlf);
         var lines = data.split('\r\n');
         for (var i = 0; i < lines.length; ++i) {
             var line = lines[i].trim();
