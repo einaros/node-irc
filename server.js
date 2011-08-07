@@ -8,9 +8,8 @@ irc.on('privmsg', function(from, to, message) {
     console.log('privmsg: ' + message + ', from ' + from);
     // irc.privmsg(from, 'hi yourself!');
 });
-irc.on('servertext', function(from, text) {
+irc.on('servertext', function(from, to, text) {
     console.log('(' + from + ') ' + text);
-    // irc.privmsg(from, 'hi yourself!');
 });
 irc.on('ping', function(from) {
     console.log('ping from ' + from);
