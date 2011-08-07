@@ -53,6 +53,18 @@ public(IRC.prototype, {
         this._username = username;
         this._socket.connect(this._port, this._server);
     },
+    join: function(channel, callback) {
+        // var channels = Array.prototype.slice.call(arguments).join(',');
+        this._socket.write('JOIN ' + channel + '\r\n');
+        if (typeof callback === 'function') {
+            this.on('join', delegate(this, function(who, where) {
+                if (who == this._username && where == channel) {
+                    this.removeListener('join', arguments.callee);
+                    callback();
+                }
+            }));
+        }
+    },
     privmsg: function(to, message) {
         this._socket.write('PRIVMSG ' + to + ' :' + message + '\r\n');
     },
@@ -90,9 +102,17 @@ private(IRC.prototype, {
             var identity = parseIdentity(from);
             var data = data.match(/([^\s]*)\s:(.*)/);
             if (!data) throw 'invalid privmsg structure';
-            to = data[1];
-            message = data[2];
+            var to = data[1];
+            var message = data[2];
             this.emit('privmsg', identity.nick, to, message);
+        },
+        'JOIN': function(from, data) {
+            // :Angel!foo@bar JOIN :#channel
+            var identity = parseIdentity(from);
+            var data = data.match(/:(.*)/);
+            if (!data) throw 'invalid JOIN structure';
+            var channel = data[1];
+            this.emit('join', identity.nick, channel);
         },
         'CTCP_PRIVMSG_PING': function(from, to, data) {
             var identity = parseIdentity(from);

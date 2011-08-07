@@ -2,6 +2,7 @@ var IRC = require('./IRC').IRC;
 var irc = new IRC('irc.homelien.no', 6667);
 irc.on('connected', function(server) {
     console.log('connected to ' + server);
+    irc.join('#foobartest');
 });
 irc.on('privmsg', function(from, to, message) {
     console.log('privmsg: ' + message + ', from ' + from);
