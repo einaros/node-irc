@@ -1,13 +1,10 @@
-{ "name": "irc",
-  "version": "0.0.1",
-  "description": "IRC client library",
-  "author": "Einar Otto Stangvik <einaros@gmail.com>",
-  "repository": "git://github.com/einaros/irc",
-  // "bin": {
-  //   "expresso": "./bin/expresso",
-  //   "node-jscoverage": "./deps/jscoverage/node-jscoverage"
-  // },
-  // "scripts": {
-  //   "preinstall": "make deps/jscoverage/node-jscoverage"
-  // }
+{ 
+    "name": "irc",
+    "version": "0.0.1",
+    "description": "IRC client library",
+    "author": "Einar Otto Stangvik <einaros@gmail.com>",
+    "repository": "git://github.com/einaros/irc",
+    "devDependencies": {
+        "expresso": "0.7.7"
+    }
 }
