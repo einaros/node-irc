@@ -91,7 +91,6 @@ private(IRC.prototype, {
         },
     },
     _processServerMessage: function(line) {
-        console.log('[' + line + ']');
         // :Angel!foo@bar PRIVMSG Wiz :\1PING 123 123
         var matches = line.match(/^:([^\s]*)\s([^\s]*)\s([^\s]*)\s:\u0001([^\s]*)\s(.*)\u0001/);
         if (matches) {
@@ -99,6 +98,7 @@ private(IRC.prototype, {
             if (typeof(handler) !== 'undefined') {
                 handler.call(this, matches[1], matches[3], matches[5]);
             }
+            else console.log('unhandled ctcp: ' + line);
             return;
         }
         // :Angel!foo@bar PRIVMSG Wiz :Hello are you receiving this message ?
@@ -108,6 +108,7 @@ private(IRC.prototype, {
             if (typeof(handler) !== 'undefined') {
                 handler.call(this, matches[1], matches[3]);
             }
+            else console.log('unhandled msg: ' + line);
             return;
         }
         // PING :irc.homelien.no
@@ -117,8 +118,11 @@ private(IRC.prototype, {
             if (typeof(handler) !== 'undefined') {
                 handler.call(this, matches[2]);
             }
+            else console.log('unhandled server command: ' + line);
             return;
         }
+        // Unknown
+        console.log('unmatched server data: ' + line);
     }
 });
 exports.IRC = IRC;
