@@ -112,4 +112,26 @@ module.exports = {
         irc.ping('foo');
         assert.ok(obj.write.history.last()[0].match(/^PRIVMSG foo :\u0001PING [0-9\s]*\u0001\r\n/));
     },
+    'privmsg sends privmsg': function(){
+        var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+        var irc = new IRC(obj);
+        var eventEmitted = false;
+        irc.privmsg('foo', 'hi there!');
+        assert.ok(obj.write.history.last()[0].match(/^PRIVMSG foo :hi there!\r\n/));
+    },
+    'handles chunked data': function(){
+        var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+        var irc = new IRC(obj);
+        var eventEmitted = false;
+        irc.on('privmsg', function(from, to, message) {
+            eventEmitted = true;
+            assert.equal('foo', from);
+            assert.equal('bar', to);
+            assert.equal('hi there!', message);
+        });
+        data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
+        data(':foo PRIVMSG bar ');
+        data(':hi there!\r\n');
+        assert.ok(eventEmitted);
+    },
 };
