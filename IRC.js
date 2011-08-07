@@ -13,6 +13,8 @@ function IRC(server, port) {
     else {
         this._socket = new net.Socket();        
     }
+    this._server = server;
+    this._port = port;
     this._socket.setEncoding('ascii');
     this._socket.on('connect', delegate(this, function() {
         this._socket.write('NICK ' + this._username + '\r\n');
@@ -40,7 +42,7 @@ util.inherits(IRC, events.EventEmitter);
 public(IRC.prototype, {
     connect: function(username) {
         this._username = username;
-        this._socket.connect(6667, 'irc.homelien.no');
+        this._socket.connect(this._port, this._server);
     },
     privmsg: function(to, message) {
         this._socket.write('PRIVMSG ' + to + ' :' + message + '\r\n');
