@@ -52,6 +52,7 @@ public(IRC.prototype, {
 });
 private(IRC.prototype, {
     _messageHandlers: {
+        // Server messages
         '372': function() {
             return this._messageHandlers['375'].apply(this, arguments);
         },
@@ -64,6 +65,12 @@ private(IRC.prototype, {
         '376': function(from, data) {
             this.emit('connected', from);
         },
+        'PING': function(from) {
+            // PING :irc.homelien.no
+            this.emit('ping', from.substr(1));
+            this._socket.write('PONG ' + from + '\r\n');
+        },
+        // Client messages
         'PRIVMSG': function(from, data) {
             // :Angel!foo@bar PRIVMSG Wiz :Hello are you receiving this message ?
             var identity = parseIdentity(from);
@@ -73,20 +80,35 @@ private(IRC.prototype, {
             message = data[2];
             this.emit('privmsg', identity.nick, to, message);
         },
-        'PING': function(from) {
-            // PING :irc.homelien.no
-            this.emit('ping', from.substr(1));
-            this._socket.write('PONG ' + from + '\r\n');
-        }
+        'CTCP_PRIVMSG_PING': function(from, to, data) {
+            var identity = parseIdentity(from);
+            this.emit('ping', identity.nick);
+            this._socket.write('NOTICE ' + identity.nick + ' :\1PING ' + data + '\1\r\n');
+        },
+        'CTCP_NOTICE_PING': function(from, to, data) {
+            var identity = parseIdentity(from);
+            this.emit('ping-reply', identity.nick, Date.now() - Number(data));
+        },
     },
     _processServerMessage: function(line) {
+        console.log('[' + line + ']');
+        // :Angel!foo@bar PRIVMSG Wiz :\1PING 123 123
+        var matches = line.match(/^:([^\s]*)\s([^\s]*)\s([^\s]*)\s:\u0001([^\s]*)\s(.*)\u0001/);
+        if (matches) {
+            var handler = this._messageHandlers['CTCP_' + matches[2] + '_' + matches[4]];
+            if (typeof(handler) !== 'undefined') {
+                handler.call(this, matches[1], matches[3], matches[5]);
+            }
+            return;
+        }
         // :Angel!foo@bar PRIVMSG Wiz :Hello are you receiving this message ?
-        var matches = line.match(/:([^\s]*)\s([^\s]*)\s(.*)/);
+        var matches = line.match(/^:([^\s]*)\s([^\s]*)\s(.*)/);
         if (matches) {
             var handler = this._messageHandlers[matches[2]];
             if (typeof(handler) !== 'undefined') {
                 handler.call(this, matches[1], matches[3]);
             }
+            return;
         }
         // PING :irc.homelien.no
         matches = line.match(/([^\s]*)\s(.*)/);
@@ -95,6 +117,7 @@ private(IRC.prototype, {
             if (typeof(handler) !== 'undefined') {
                 handler.call(this, matches[2]);
             }
+            return;
         }
     }
 });
