@@ -1,6 +1,6 @@
+require('../array');
 var assert = require('assert'); 
 var fake = require('../fake').fake;
-require('../array');
 var IRC = require('../IRC').IRC;
 
 module.exports = {
