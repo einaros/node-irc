@@ -35,4 +35,41 @@ module.exports = {
         assert.ok(eventEmitted);
         assert.equal('PONG :irc.foo.bar\r\n', obj.write.history.last()[0]);
     },
+    'test motd': function(){
+        var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+        var irc = new IRC(obj);
+        var eventEmitted = false;
+        irc.on('servertext', function(from, to, text) {
+            if (from == 'irc.foo.bar' &&
+                to == 'user' &&
+                text == 'hi there') eventEmitted = true;
+        });
+        data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
+        data(':irc.foo.bar 375 user :hi there\r\n');
+        assert.ok(eventEmitted);
+    },
+    'test servertext': function(){
+        var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+        var irc = new IRC(obj);
+        var eventEmitted = false;
+        irc.on('servertext', function(from, to, text) {
+            if (from == 'irc.foo.bar' &&
+                to == 'user' &&
+                text == 'hi there') eventEmitted = true;
+        });
+        data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
+        data(':irc.foo.bar 372 user :hi there\r\n');
+        assert.ok(eventEmitted);
+    },
+    'test end of motd': function(){
+        var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+        var irc = new IRC(obj);
+        var eventEmitted = false;
+        irc.on('connected', function(from, to, text) {
+            eventEmitted = true;
+        });
+        data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
+        data(':irc.foo.bar 376 user :end of motd\r\n');
+        assert.ok(eventEmitted);
+    },
 };
