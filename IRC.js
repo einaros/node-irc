@@ -142,10 +142,10 @@ private(IRC.prototype, {
             this.emit('join', identity.nick, data[1]);
         },
         'NICK': function(from, data) {
-            // :Angel!foo@bar JOIN :#channel
+            // :Angel!foo@bar NICK newnick
             var identity = parseIdentity(from);
-            var data = data.match(/(.*)/);
-            if (!data) throw 'invalid JOIN structure';
+            var data = data.match(/:?(.*)/);
+            if (!data) throw 'invalid NICK structure';
             this.emit('nick-change', identity.nick, data[1]);
         },
         'CTCP_PRIVMSG_PING': function(from, to, data) {
@@ -164,7 +164,7 @@ private(IRC.prototype, {
         // }
     },
     _processServerMessage: function(line) {
-        // :Angel!foo@bar PRIVMSG Wiz :\1PING 123 123
+        // :Angel!foo@bar PRIVMSG Wiz :\1PING 123 123\1
         var matches = line.match(/^:([^\s]*)\s([^\s]*)\s([^\s]*)\s:\u0001([^\s]*)\s(.*)\u0001/);
         if (matches) {
             var handler = this._messageHandlers['CTCP_' + matches[2] + '_' + matches[4]];

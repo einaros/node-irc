@@ -202,7 +202,7 @@ module.exports = {
             assert.equal('bar', newnick);
         });
         data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
-        data(':foo!bar@somewhere.com NICK bar\r\n');
+        data(':foo!bar@somewhere.com NICK :bar\r\n');
         assert.ok(eventEmitted);
         assert.equal(0, irc.listeners('nick-inuse').length);
         assert.equal(0, irc.listeners('nick-change').length);
