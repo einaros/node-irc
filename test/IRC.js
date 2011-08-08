@@ -207,7 +207,7 @@ module.exports = {
         assert.equal(0, irc.listeners('nick-inuse').length);
         assert.equal(0, irc.listeners('nick-change').length);
     },
-    'nick calls callback with null newnick when nick change yielsl nick_in_use': function() {
+    'nick calls callback with null newnick when nick change yields nick_in_use': function() {
         var obj = fake(['on', 'setEncoding', 'connect', 'write']);
         var irc = new IRC(obj);
         irc._username = 'foo';
