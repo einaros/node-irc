@@ -2,12 +2,18 @@ var IRC = require('./IRC').IRC;
 var irc = new IRC('irc.homelien.no', 6667);
 irc.on('connected', function(server) {
     console.log('connected to ' + server);
-    irc.join('#forensic', function() {
+    irc.join('#foobartest', function() {
         // irc.privmsg('#foobartest', 'well hello yall');
         // irc.nick('muppetty2', function(old, newn) {
         //     irc.privmsg('#foobartest', 'I\'m new!');
         // });
     });
+});
+irc.on('quit', function(who, message) {
+    console.log(who + ' quit: ' + message);
+});
+irc.on('part', function(who, channel) {
+    console.log(who + ' left ' + channel);
 });
 irc.on('privmsg', function(from, to, message) {
     console.log('<' + from + '> to ' + to + ': ' + message);

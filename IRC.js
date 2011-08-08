@@ -194,6 +194,10 @@ private(IRC.prototype, {
         /* RPL_ENDOFMOTD */ '376': function(from, data) {
             this.emit('connected', from);
         },
+        /* RPL_NAMRPLY */ '353': function() {
+        },
+        /* RPL_ENDOFNAMES */ '354': function() {            
+        },
         'PING': function(from) {
             this.emit('ping', from);
             this._socket.write('PONG :' + from + '\r\n');

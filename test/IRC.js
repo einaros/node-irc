@@ -93,6 +93,21 @@ module.exports = {
         data(':baz!bar@somewhere.com PART #test\r\n');
         assert.ok(eventEmitted);
     },
+    'incoming names list causes names event': function() {
+        var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+        var irc = new IRC(obj);
+        var eventEmitted = false;
+        irc.on('part', function(where, names) {
+            eventEmitted = true;
+            assert.equal('#foobartest', where);
+            assert.equal(['@foo', '@bar', '+baz', 'bam'], names);
+        });
+        data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
+        data(':irc.homelien.no 353 muppetty = #foobartest :muppetty @foo\r\n');
+        data(':irc.homelien.no 353 muppetty = #foobartest :muppetty @bar +baz bam\r\n');
+        data(':irc.homelien.no 366 muppetty #foobartest :End of /NAMES list.');
+        assert.ok(eventEmitted);
+    },
     'incoming server ping causes pong and ping event': function() {
         var obj = fake(['on', 'setEncoding', 'connect', 'write']);
         var irc = new IRC(obj);
