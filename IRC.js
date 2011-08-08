@@ -214,6 +214,14 @@ private(IRC.prototype, {
             if (!data) throw 'invalid NICK structure';
             this.emit('nick-change', identity.nick, data[1]);
         },
+        'PART': function(who, where) {
+            var identity = parseIdentity(who);
+            this.emit('part', identity.nick, where);
+        },
+        'QUIT': function(who, message) {
+            var identity = parseIdentity(who);
+            this.emit('quit', identity.nick, message);
+        },
         'CTCP_PRIVMSG_PING': function(from, to, data) {
             var identity = parseIdentity(from);
             this.emit('ping', identity.nick);
@@ -223,11 +231,6 @@ private(IRC.prototype, {
             var identity = parseIdentity(from);
             this.emit('ping-reply', identity.nick, Date.now() - Number(data));
         },
-        // 'CTCP_PRIVMSG_ACTION': function(from, to, data) {
-        //     //:einar_!~einar@cypher.itu.dk PRIVMSG undefined :ACTION laks
-        //     var identity = parseIdentity(from);
-        //     this.emit('action', identity.nick);            
-        // }
     },
     _processServerMessage: function(line) {
         var matches = line.match(/^:([^\s]*)\s([^\s]*)\s([^\s]*)\s:\u0001([^\s]*)\s(.*)\u0001/);

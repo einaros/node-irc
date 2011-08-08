@@ -67,6 +67,32 @@ module.exports = {
         data(':foo!bar@somewhere.com NICK bar\r\n');
         assert.ok(eventEmitted);
     },
+    'incoming quit causes quit event': function() {
+        var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+        var irc = new IRC(obj);
+        var eventEmitted = false;
+        irc.on('quit', function(who, message) {
+            eventEmitted = true;
+            assert.equal('baz', who);
+            assert.equal('Quit: http://chat.efnet.org  (Ping timeout)', message);
+        });
+        data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
+        data(':baz!bar@somewhere.com QUIT :Quit: http://chat.efnet.org  (Ping timeout)\r\n');
+        assert.ok(eventEmitted);
+    },
+    'incoming part causes part event': function() {
+        var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+        var irc = new IRC(obj);
+        var eventEmitted = false;
+        irc.on('part', function(who, where) {
+            eventEmitted = true;
+            assert.equal('baz', who);
+            assert.equal('#test', where);
+        });
+        data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
+        data(':baz!bar@somewhere.com PART #test\r\n');
+        assert.ok(eventEmitted);
+    },
     'incoming server ping causes pong and ping event': function() {
         var obj = fake(['on', 'setEncoding', 'connect', 'write']);
         var irc = new IRC(obj);
