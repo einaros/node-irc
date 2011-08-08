@@ -21,7 +21,8 @@ function IRC(server, port) {
             var interceptorArray = this._interceptorMap[event];
             if (interceptorArray && interceptorArray.length > 0) {
                 for (var i = 0; i < interceptorArray.length; ++i) {
-                    if (interceptorArray[i][event].apply(this, arguments) === true) {
+                    if (interceptorArray[i][event].apply(this, 
+                        Array.prototype.slice.call(arguments, 1)) === true) {
                         interceptorArray[i].__remove();
                         break;
                     }
@@ -70,29 +71,28 @@ public(IRC.prototype, {
     },
     join: function(channel, callback) {
         this._socket.write('JOIN ' + channel + '\r\n');
-        if (typeof callback === 'function') {
-            var handler = function(who, where) {
+        this._intercept({
+            'join': function(who, where) {
                 if (who == this._username && where == channel) {
-                    this.removeListener('join', handler);
-                    callback();
+                    if (typeof callback === 'function') callback();
+                    return true;
                 }
-            }.bind(this);
-            this.on('join', handler);
-        }
+            }.bind(this),
+        });
     },
     nick: function(newnick, callback) {
         this._socket.write('NICK ' + newnick + '\r\n');
         this._intercept({
-            'nick-change': function(event, oldn, newn) {
+            'nick-change': function(oldn, newn) {
                 if (oldn == this._username && newn == newnick) {
                     this._username = newnick;
                     if (typeof callback === 'function') callback(oldn, newn);
                     return true;
                 }
             }.bind(this),
-            'errorcode': function(event, code, oldn, newn, reason) {
-                if (oldn == this._username && newn == newnick) {
-                    if (typeof callback === 'function') callback(oldn, null);
+            'errorcode': function(code, to, regarding, reason) {
+                if (code === 'ERR_NICKNAMEINUSE') {
+                    if (typeof callback === 'function') callback(to, null);
                     return true;
                 }
             }.bind(this)
