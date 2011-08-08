@@ -91,7 +91,10 @@ public(IRC.prototype, {
                 }
             }.bind(this),
             'errorcode': function(code, to, regarding, reason) {
-                if (code === 'ERR_NICKNAMEINUSE') {
+                if (code === 'ERR_NONICKNAMEGIVEN' ||
+                    code === 'ERR_ERRONEUSNICKNAME' ||
+                    code === 'ERR_NICKNAMEINUSE' ||
+                    code === 'ERR_NICKCOLLISION') {
                     if (typeof callback === 'function') callback(to, null);
                     return true;
                 }
@@ -136,7 +139,51 @@ private(IRC.prototype, {
     },
     _messageHandlers: {
         // Errors
+        '401': 'ERR_NOSUCHNICK',
+        '402': 'ERR_NOSUCHSERVER',
+        '403': 'ERR_NOSUCHCHANNEL',
+        '404': 'ERR_CANNOTSENDTOCHAN',
+        '405': 'ERR_TOOMANYCHANNELS',
+        '406': 'ERR_WASNOSUCHNICK',
+        '407': 'ERR_TOOMANYTARGETS',
+        '409': 'ERR_NOORIGIN',
+        '411': 'ERR_NORECIPIENT',
+        '412': 'ERR_NOTEXTTOSEND',
+        '413': 'ERR_NOTOPLEVEL',
+        '414': 'ERR_WILDTOPLEVEL',
+        '421': 'ERR_UNKNOWNCOMMAND',
+        '422': 'ERR_NOMOTD',
+        '423': 'ERR_NOADMININFO',
+        '424': 'ERR_FILEERROR',
+        '431': 'ERR_NONICKNAMEGIVEN',
+        '432': 'ERR_ERRONEUSNICKNAME',
         '433': 'ERR_NICKNAMEINUSE',
+        '436': 'ERR_NICKCOLLISION',
+        '441': 'ERR_USERNOTINCHANNEL',
+        '442': 'ERR_NOTONCHANNEL',
+        '443': 'ERR_USERONCHANNEL',
+        '444': 'ERR_NOLOGIN',
+        '445': 'ERR_SUMMONDISABLED',
+        '446': 'ERR_USERSDISABLED',
+        '451': 'ERR_NOTREGISTERED',
+        '461': 'ERR_NEEDMOREPARAMS',
+        '462': 'ERR_ALREADYREGISTRED',
+        '463': 'ERR_NOPERMFORHOST',
+        '464': 'ERR_PASSWDMISMATCH',
+        '465': 'ERR_YOUREBANNEDCREEP',
+        '467': 'ERR_KEYSET',
+        '471': 'ERR_CHANNELISFULL',
+        '472': 'ERR_UNKNOWNMODE',
+        '473': 'ERR_INVITEONLYCHAN',
+        '474': 'ERR_BANNEDFROMCHAN',
+        '475': 'ERR_BADCHANNELKEY',
+        '481': 'ERR_NOPRIVILEGES',
+        '482': 'ERR_CHANOPRIVSNEEDED',
+        '483': 'ERR_CANTKILLSERVER',
+        '491': 'ERR_NOOPERHOST',
+        '501': 'ERR_UMODEUNKNOWNFLAG',
+        '502': 'ERR_USERSDONTMATCH',
+        
         // Server messages
         /* RPL_MOTDSTART */ '375': function() {
             return this._messageHandlers['372'].apply(this, arguments);

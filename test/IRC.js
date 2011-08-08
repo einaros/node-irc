@@ -163,6 +163,22 @@ module.exports = {
         data(':irc.foo.bar 433 foo bar :Nickname is already in use.\r\n');
         assert.ok(eventEmitted);
     },
+    'incoming ERR_NONICKNAMEGIVEN causes error event': function() {
+        var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+        var irc = new IRC(obj);
+        irc._username = 'foo';
+        var eventEmitted = false;
+        irc.on('errorcode', function(code, to, reason) {
+            eventEmitted = true;
+            assert.equal('ERR_NONICKNAMEGIVEN', code);
+            assert.equal('foo', to);
+            assert.equal('Blah blah blah.', reason);            
+        });
+        irc.nick('bar');
+        data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
+        data(':irc.foo.bar 431 foo :Blah blah blah.\r\n');
+        assert.ok(eventEmitted);
+    },
     'ping sends ctcp ping to server': function() {
         var obj = fake(['on', 'setEncoding', 'connect', 'write']);
         var irc = new IRC(obj);
