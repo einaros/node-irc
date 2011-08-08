@@ -14,6 +14,7 @@ function IRC(server, port) {
     }
     this._server = server;
     this._port = port;
+    this._cache = {};
     var realEmit = this.emit;
     this._interceptorMap = {};
     this.emit = function(event) {
@@ -75,6 +76,17 @@ public(IRC.prototype, {
             'join': function(who, where) {
                 if (who == this._username && where == channel) {
                     if (typeof callback === 'function') callback();
+                    return true;
+                }
+            }.bind(this),
+        });
+    },
+    names: function(channel, callback) {
+        this._socket.write('NAMES ' + channel + '\r\n');
+        this._intercept({
+            'names': function(where, names) {
+                if (where == channel) {
+                    if (typeof callback === 'function') callback(names);
                     return true;
                 }
             }.bind(this),
@@ -194,9 +206,13 @@ private(IRC.prototype, {
         /* RPL_ENDOFMOTD */ '376': function(from, data) {
             this.emit('connected', from);
         },
-        /* RPL_NAMRPLY */ '353': function() {
+        /* RPL_NAMRPLY */ '353': function(from, to, where, names) {
+            this._cache['names'] = this._cache['names'] || {};
+            this._cache['names'][where] = (this._cache['names'][where] || []).concat(names.split(' '));
         },
-        /* RPL_ENDOFNAMES */ '354': function() {            
+        /* RPL_ENDOFNAMES */ '366': function(from, to, where) {
+            this.emit('names', where, this._cache['names'][where]);
+            delete this._cache['names'][where];
         },
         'PING': function(from) {
             this.emit('ping', from);
@@ -246,7 +262,7 @@ private(IRC.prototype, {
             else console.log('unhandled ctcp: ' + line);
             return;
         }
-        matches = line.match(/(?::([^\s]*)\s)?([^:]{1}[^\s]*)(?:\s([^:]{1}[^\s]*))?(?:\s([^:]{1}[^\s]*))?(?:\s:(.*))?/);
+        matches = line.match(/(?::([^\s]*)\s)?([^:]{1}[^\s]*)(?:\s([^:]{1}[^\s]*))?(?:\s(?:=\s)?([^:]{1}[^\s]*))?(?:\s:(.*))?/);
         if (matches) {
             var handler = this._messageHandlers[matches[2]];
             var args = [];

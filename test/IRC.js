@@ -97,15 +97,15 @@ module.exports = {
         var obj = fake(['on', 'setEncoding', 'connect', 'write']);
         var irc = new IRC(obj);
         var eventEmitted = false;
-        irc.on('part', function(where, names) {
+        irc.on('names', function(where, names) {
             eventEmitted = true;
             assert.equal('#foobartest', where);
-            assert.equal(['@foo', '@bar', '+baz', 'bam'], names);
+            assert.equal(JSON.stringify(['muppetty', '@foo', '@bar', '+baz', 'bam']), JSON.stringify(names));
         });
         data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
         data(':irc.homelien.no 353 muppetty = #foobartest :muppetty @foo\r\n');
-        data(':irc.homelien.no 353 muppetty = #foobartest :muppetty @bar +baz bam\r\n');
-        data(':irc.homelien.no 366 muppetty #foobartest :End of /NAMES list.');
+        data(':irc.homelien.no 353 muppetty = #foobartest :@bar +baz bam\r\n');
+        data(':irc.homelien.no 366 muppetty #foobartest :End of /NAMES list.\r\n');
         assert.ok(eventEmitted);
     },
     'incoming server ping causes pong and ping event': function() {
@@ -220,21 +220,21 @@ module.exports = {
         data(':irc.foo.bar 431 foo :Blah blah blah.\r\n');
         assert.ok(eventEmitted);
     },
-    'ping sends ctcp ping to server': function() {
+    'ping sends ctcp ping command to server': function() {
         var obj = fake(['on', 'setEncoding', 'connect', 'write']);
         var irc = new IRC(obj);
         var eventEmitted = false;
         irc.ping('foo');
         assert.ok(obj.write.history.last()[0].match(/^PRIVMSG foo :\u0001PING [0-9\s]*\u0001\r\n/));
     },
-    'privmsg sends privmsg to server': function() {
+    'privmsg sends privmsg command to server': function() {
         var obj = fake(['on', 'setEncoding', 'connect', 'write']);
         var irc = new IRC(obj);
         var eventEmitted = false;
         irc.privmsg('foo', 'hi there!');
         assert.ok(obj.write.history.last()[0].match(/^PRIVMSG foo :hi there!\r\n/));
     },
-    'join sends join to server': function() {
+    'join sends join command to server': function() {
         var obj = fake(['on', 'setEncoding', 'connect', 'write']);
         var irc = new IRC(obj);
         var eventEmitted = false;
@@ -254,13 +254,10 @@ module.exports = {
         assert.ok(eventEmitted);
         assert.equal(0, irc.listeners('join').length);
     },
-    'nick sends nick to server': function() {
+    'nick sends nick command to server': function() {
         var obj = fake(['on', 'setEncoding', 'connect', 'write']);
         var irc = new IRC(obj);
-        irc._username = 'foo';
         irc.nick('bar');
-        data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
-        data(':foo!bar@somewhere.com NICK bar\r\n');
         assert.ok(obj.write.history.last()[0].match(/^NICK bar\r\n/));
         assert.equal(0, irc.listeners('nick-inuse').length);
         assert.equal(0, irc.listeners('nick-change').length);
@@ -280,6 +277,26 @@ module.exports = {
         assert.ok(eventEmitted);
         assert.equal(0, irc.listeners('nick-inuse').length);
         assert.equal(0, irc.listeners('nick-change').length);
+    },
+    'names sends names command to server': function() {
+        var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+        var irc = new IRC(obj);
+        irc.names('#test');
+        assert.ok(obj.write.history.last()[0].match(/^NAMES #test\r\n/));
+    },
+    'names calls callback when name listing is done': function() {
+        var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+        var irc = new IRC(obj);
+        var eventEmitted = false;
+        irc.names('#foobartest', function(names) {
+            eventEmitted = true;
+            assert.equal(JSON.stringify(['muppetty', '@foo', '@bar', '+baz', 'bam']), JSON.stringify(names));
+        });
+        data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
+        data(':irc.homelien.no 353 muppetty = #foobartest :muppetty @foo\r\n');
+        data(':irc.homelien.no 353 muppetty = #foobartest :@bar +baz bam\r\n');
+        data(':irc.homelien.no 366 muppetty #foobartest :End of /NAMES list.\r\n');
+        assert.ok(eventEmitted);
     },
     'nick calls callback with null newnick when nick change yields nick_in_use': function() {
         var obj = fake(['on', 'setEncoding', 'connect', 'write']);
