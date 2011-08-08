@@ -10,8 +10,9 @@ irc.on('connected', function(server) {
     });
 });
 irc.on('privmsg', function(from, to, message) {
-    console.log('privmsg: ' + message + ', from ' + from);
-    irc.privmsg(from, 'hi!');
+    console.log('<' + from + '> to ' + to + ': ' + message);
+    if (to[0] == '#') irc.privmsg(to, 'public greetings, ' + from);
+    else irc.privmsg(from, 'hi!');
 });
 irc.on('servertext', function(from, to, text) {
     console.log('(' + from + ') ' + text);
