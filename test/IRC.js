@@ -146,6 +146,23 @@ module.exports = {
         data(':irc.foo.bar 376 user :end of motd\r\n');
         assert.ok(eventEmitted);
     },
+    'incoming ERR_NICKNAMEINUSE causes error event': function() {
+        var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+        var irc = new IRC(obj);
+        irc._username = 'foo';
+        var eventEmitted = false;
+        irc.on('errorcode', function(code, to, regarding, reason) {
+            eventEmitted = true;
+            assert.equal('ERR_NICKNAMEINUSE', code);
+            assert.equal('foo', to);
+            assert.equal('bar', regarding);
+            assert.equal('Nickname is already in use.', reason);            
+        });
+        irc.nick('bar');
+        data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
+        data(':irc.foo.bar 433 foo bar :Nickname is already in use.\r\n');
+        assert.ok(eventEmitted);
+    },
     'ping sends ctcp ping to server': function() {
         var obj = fake(['on', 'setEncoding', 'connect', 'write']);
         var irc = new IRC(obj);
@@ -222,5 +239,25 @@ module.exports = {
         assert.ok(eventEmitted);
         assert.equal(0, irc.listeners('nick-inuse').length);
         assert.equal(0, irc.listeners('nick-change').length);
+    },
+    'nick callbacks will stack, not execute in parallell': function() {
+        var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+        var irc = new IRC(obj);
+        irc._username = 'foo';
+        var eventEmitted = 0;
+        irc.nick('bar', function(oldnick, newnick) {
+            eventEmitted++;
+            assert.equal('foo', oldnick);
+            assert.equal('bar', newnick);
+        });
+        irc.nick('baz', function(oldnick, newnick) {
+            eventEmitted++;
+            assert.equal('bar', oldnick);
+            assert.equal('baz', newnick);
+        });
+        data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
+        data(':foo!bar@somewhere.com NICK bar\r\n');
+        data(':bar!bar@somewhere.com NICK baz\r\n');
+        assert.equal(2, eventEmitted);
     },
 };

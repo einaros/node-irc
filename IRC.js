@@ -14,6 +14,22 @@ function IRC(server, port) {
     }
     this._server = server;
     this._port = port;
+    var realEmit = this.emit;
+    this._interceptorMap = {};
+    this.emit = function(event) {
+        if (event !== 'newListener') {
+            var interceptorArray = this._interceptorMap[event];
+            if (interceptorArray && interceptorArray.length > 0) {
+                for (var i = 0; i < interceptorArray.length; ++i) {
+                    if (interceptorArray[i][event].apply(this, arguments) === true) {
+                        interceptorArray[i].__remove();
+                        break;
+                    }
+                }
+            }
+        }
+        return realEmit.apply(this, arguments);
+    }
     this._socket.setEncoding('ascii');
     this._socket.on('connect', function() {
         this._socket.write('NICK ' + this._username + '\r\n');
@@ -66,24 +82,23 @@ public(IRC.prototype, {
     },
     nick: function(newnick, callback) {
         this._socket.write('NICK ' + newnick + '\r\n');
-        var changeHandler = function(oldn, newn) {
-            if (oldn == this._username && newn == newnick) {
-                this.removeListener('nick-change', changeHandler);
-                this.removeListener('nick-inuse', inuseHandler);
-                this._username = newnick;
-                if (typeof callback === 'function') callback(oldn, newn);
-            }
-        }.bind(this);
-        var inuseHandler = function(oldn, newn, reason) {
-            if (oldn == this._username && newn == newnick) {
-                this.removeListener('nick-change', changeHandler);
-                this.removeListener('nick-inuse', inuseHandler);
-                this._username = newnick;
-                if (typeof callback === 'function') callback(oldn, null);
-            }
-        }.bind(this);
-        this.on('nick-change', changeHandler);
-        this.on('nick-inuse', inuseHandler);
+        this._intercept({
+            'nick-change': function(event, oldn, newn) {
+                if (oldn == this._username && newn == newnick) {
+                    this._username = newnick;
+                    if (typeof callback === 'function') callback(oldn, newn);
+                    return true;
+                }
+            }.bind(this),
+            'errorcode': function(event, code, oldn, newn, reason) {
+                if (oldn == this._username && newn == newnick) {
+                    if (typeof callback === 'function') callback(oldn, null);
+                    return true;
+                }
+            }.bind(this)
+        });
+        // this.on('nick-change', changeHandler);
+        // this.on('nick-inuse', inuseHandler);
     },
     privmsg: function(to, message) {
         this._socket.write('PRIVMSG ' + to + ' :' + message + '\r\n');
@@ -93,52 +108,59 @@ public(IRC.prototype, {
     },
     quit: function(message) {
         this._socket.write('QUIT :' + message + '\r\n');
-        this._socket.close()
+        this._socket.close();
     }    
 });
 private(IRC.prototype, {
+    // stacks an interceptor for the given set of events
+    _intercept: function(interceptor) {
+        var interceptorStackArray = [];
+        private(interceptor, {
+            __remove: function() {
+                for (var i = 0; i < interceptorStackArray.length; ++i) {
+                    var interceptorStack = interceptorStackArray[i];
+                    var index = interceptorStack.indexOf(interceptor);
+                    if (index != -1) interceptorStack.splice(index, 1);
+                }
+            }
+        });
+        for (var event in interceptor) {
+            var interceptorStack = this._interceptorMap[event];
+            if (typeof interceptorStack === 'undefined') {
+                interceptorStack = this._interceptorMap[event] = [];
+            }
+            interceptorStack.push(interceptor);
+            interceptorStackArray.push(interceptorStack);
+        }
+    },
+    _errorHandler: function(code, server, to, regarding, reason) {
+        this.emit('errorcode', code, to, regarding, reason);
+    },
     _messageHandlers: {
+        // Errors
+        '433': 'ERR_NICKNAMEINUSE',
         // Server messages
-        /* RPL_MOTDSTART */ '375': function(from, data) {
-            var parsed = data.match(/([^\s]*)\s:(.*)/);
-            var to = parsed[1];
-            var text = parsed[2];
-            this.emit('servertext', from, to, text);
+        /* RPL_MOTDSTART */ '375': function() {
+            return this._messageHandlers['372'].apply(this, arguments);
         },
-        /* RPL_MOTD */ '372': function() {
-            return this._messageHandlers['375'].apply(this, arguments);
+        /* RPL_MOTD */ '372': function(from, to, text) {
+            this.emit('servertext', from, to, text);
         },
         /* RPL_ENDOFMOTD */ '376': function(from, data) {
             this.emit('connected', from);
         },
-        /* ERR_NICKNAMEINUSE */ '433': function(from, data) {
-            var parsed = data.match(/([^\s]*)\s([^\s]*)\s:(.*)/);
-            var to = parsed[1];
-            var nick = parsed[2];
-            var reason = parsed[3];
-            this.emit('nick-inuse', to, nick, reason);
-        },
         'PING': function(from) {
-            // PING :irc.homelien.no
-            this.emit('ping', from.substr(1));
-            this._socket.write('PONG ' + from + '\r\n');
+            this.emit('ping', from);
+            this._socket.write('PONG :' + from + '\r\n');
         },
         // Client messages
-        'PRIVMSG': function(from, data) {
-            // :Angel!foo@bar PRIVMSG Wiz :Hello are you receiving this message ?
+        'PRIVMSG': function(from, to, message) {
             var identity = parseIdentity(from);
-            var data = data.match(/([^\s]*)\s:(.*)/);
-            if (!data) throw 'invalid privmsg structure';
-            var to = data[1];
-            var message = data[2];
             this.emit('privmsg', identity.nick, to, message);
         },
-        'JOIN': function(from, data) {
-            // :Angel!foo@bar JOIN :#channel
-            var identity = parseIdentity(from);
-            var data = data.match(/:(.*)/);
-            if (!data) throw 'invalid JOIN structure';
-            this.emit('join', identity.nick, data[1]);
+        'JOIN': function(who, channel) {
+            var identity = parseIdentity(who);
+            this.emit('join', identity.nick, channel);
         },
         'NICK': function(from, data) {
             // :Angel!foo@bar NICK newnick
@@ -163,34 +185,28 @@ private(IRC.prototype, {
         // }
     },
     _processServerMessage: function(line) {
-        // :Angel!foo@bar PRIVMSG Wiz :\1PING 123 123\1
         var matches = line.match(/^:([^\s]*)\s([^\s]*)\s([^\s]*)\s:\u0001([^\s]*)\s(.*)\u0001/);
         if (matches) {
             var handler = this._messageHandlers['CTCP_' + matches[2] + '_' + matches[4]];
-            if (typeof(handler) !== 'undefined') {
+            if (typeof handler !== 'undefined') {
                 handler.call(this, matches[1], matches[3], matches[5]);
             }
             else console.log('unhandled ctcp: ' + line);
             return;
         }
-        // :Angel!foo@bar PRIVMSG Wiz :Hello are you receiving this message ?
-        var matches = line.match(/^:([^\s]*)\s([^\s]*)\s(.*)/);
+        matches = line.match(/(?::([^\s]*)\s)?([^:]{1}[^\s]*)(?:\s([^:]{1}[^\s]*))?(?:\s([^:]{1}[^\s]*))?(?:\s:(.*))?/);
         if (matches) {
             var handler = this._messageHandlers[matches[2]];
-            if (typeof(handler) !== 'undefined') {
-                handler.call(this, matches[1], matches[3]);
+            var args = [];
+            for (var i = 1; i < matches.length; ++i) {
+                if (i != 2 && typeof matches[i] !== 'undefined') args.push(matches[i]);
+            }
+            if (typeof handler === 'function') handler.apply(this, args);
+            else if (typeof handler === 'string') {
+                args.unshift(handler);
+                this._errorHandler.apply(this, args);
             }
             else console.log('unhandled msg: ' + line);
-            return;
-        }
-        // PING :irc.homelien.no
-        matches = line.match(/([^\s]*)\s(.*)/);
-        if (matches) {
-            var handler = this._messageHandlers[matches[1]];
-            if (typeof(handler) !== 'undefined') {
-                handler.call(this, matches[2]);
-            }
-            else console.log('unhandled server command: ' + line);
             return;
         }
         // Unknown
