@@ -97,8 +97,6 @@ public(IRC.prototype, {
                 }
             }.bind(this)
         });
-        // this.on('nick-change', changeHandler);
-        // this.on('nick-inuse', inuseHandler);
     },
     privmsg: function(to, message) {
         this._socket.write('PRIVMSG ' + to + ' :' + message + '\r\n');
