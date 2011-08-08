@@ -4,6 +4,9 @@ irc.on('connected', function(server) {
     console.log('connected to ' + server);
     irc.join('#foobartest', function() {
         irc.privmsg('#foobartest', 'well hello yall');
+        irc.nick('lakesalat', function() {
+            irc.nick('einar');
+        });
     });
 });
 irc.on('privmsg', function(from, to, message) {

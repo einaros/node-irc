@@ -54,16 +54,37 @@ public(IRC.prototype, {
         this._socket.connect(this._port, this._server);
     },
     join: function(channel, callback) {
-        // var channels = Array.prototype.slice.call(arguments).join(',');
         this._socket.write('JOIN ' + channel + '\r\n');
         if (typeof callback === 'function') {
-            this.on('join', delegate(this, function(who, where) {
+            var handler = delegate(this, function(who, where) {
                 if (who == this._username && where == channel) {
-                    this.removeListener('join', arguments.callee);
+                    this.removeListener('join', handler);
                     callback();
                 }
-            }));
+            });
+            this.on('join', handler);
         }
+    },
+    nick: function(newnick, callback) {
+        this._socket.write('NICK ' + newnick + '\r\n');
+        var changeHandler = delegate(this, function(oldn, newn) {
+            if (oldn == this._username && newn == newnick) {
+                this.removeListener('nick-change', changeHandler);
+                this.removeListener('nick-inuse', inuseHandler);
+                this._username = newnick;
+                if (typeof callback === 'function') callback(oldn, newn);
+            }
+        });
+        var inuseHandler = delegate(this, function(oldn, newn, reason) {
+            if (oldn == this._username && newn == newnick) {
+                this.removeListener('nick-change', changeHandler);
+                this.removeListener('nick-inuse', inuseHandler);
+                this._username = newnick;
+                if (typeof callback === 'function') callback(oldn, null);
+            }
+        });
+        this.on('nick-change', changeHandler);
+        this.on('nick-inuse', inuseHandler);
     },
     privmsg: function(to, message) {
         this._socket.write('PRIVMSG ' + to + ' :' + message + '\r\n');
@@ -79,17 +100,24 @@ public(IRC.prototype, {
 private(IRC.prototype, {
     _messageHandlers: {
         // Server messages
-        '372': function() {
-            return this._messageHandlers['375'].apply(this, arguments);
-        },
-        '375': function(from, data) {
+        /* RPL_MOTDSTART */ '375': function(from, data) {
             var parsed = data.match(/([^\s]*)\s:(.*)/);
             var to = parsed[1];
             var text = parsed[2];
             this.emit('servertext', from, to, text);
         },
-        '376': function(from, data) {
+        /* RPL_MOTD */ '372': function() {
+            return this._messageHandlers['375'].apply(this, arguments);
+        },
+        /* RPL_ENDOFMOTD */ '376': function(from, data) {
             this.emit('connected', from);
+        },
+        /* ERR_NICKNAMEINUSE */ '433': function(from, data) {
+            var parsed = data.match(/([^\s]*)\s([^\s]*)\s:(.*)/);
+            var to = parsed[1];
+            var nick = parsed[2];
+            var reason = parsed[3];
+            this.emit('nick-inuse', to, nick, reason);
         },
         'PING': function(from) {
             // PING :irc.homelien.no
@@ -111,8 +139,14 @@ private(IRC.prototype, {
             var identity = parseIdentity(from);
             var data = data.match(/:(.*)/);
             if (!data) throw 'invalid JOIN structure';
-            var channel = data[1];
-            this.emit('join', identity.nick, channel);
+            this.emit('join', identity.nick, data[1]);
+        },
+        'NICK': function(from, data) {
+            // :Angel!foo@bar JOIN :#channel
+            var identity = parseIdentity(from);
+            var data = data.match(/(.*)/);
+            if (!data) throw 'invalid JOIN structure';
+            this.emit('nick-change', identity.nick, data[1]);
         },
         'CTCP_PRIVMSG_PING': function(from, to, data) {
             var identity = parseIdentity(from);

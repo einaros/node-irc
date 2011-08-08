@@ -54,6 +54,19 @@ module.exports = {
         data(':foo!bar@somewhere.com JOIN :#channel\r\n');
         assert.ok(eventEmitted);
     },
+    'incoming nick causes nick-change event': function() {
+        var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+        var irc = new IRC(obj);
+        var eventEmitted = false;
+        irc.on('nick-change', function(oldnick, newnick) {
+            eventEmitted = true;
+            assert.equal('foo', oldnick);
+            assert.equal('bar', newnick);
+        });
+        data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
+        data(':foo!bar@somewhere.com NICK bar\r\n');
+        assert.ok(eventEmitted);
+    },
     'incoming server ping causes pong and ping event': function() {
         var obj = fake(['on', 'setEncoding', 'connect', 'write']);
         var irc = new IRC(obj);
@@ -133,28 +146,28 @@ module.exports = {
         data(':irc.foo.bar 376 user :end of motd\r\n');
         assert.ok(eventEmitted);
     },
-    'ping sends ctcp ping': function() {
+    'ping sends ctcp ping to server': function() {
         var obj = fake(['on', 'setEncoding', 'connect', 'write']);
         var irc = new IRC(obj);
         var eventEmitted = false;
         irc.ping('foo');
         assert.ok(obj.write.history.last()[0].match(/^PRIVMSG foo :\u0001PING [0-9\s]*\u0001\r\n/));
     },
-    'privmsg sends privmsg': function() {
+    'privmsg sends privmsg to server': function() {
         var obj = fake(['on', 'setEncoding', 'connect', 'write']);
         var irc = new IRC(obj);
         var eventEmitted = false;
         irc.privmsg('foo', 'hi there!');
         assert.ok(obj.write.history.last()[0].match(/^PRIVMSG foo :hi there!\r\n/));
     },
-    'join sends join': function() {
+    'join sends join to server': function() {
         var obj = fake(['on', 'setEncoding', 'connect', 'write']);
         var irc = new IRC(obj);
         var eventEmitted = false;
         irc.join('#testorama');
         assert.ok(obj.write.history.last()[0].match(/^JOIN #testorama\r\n/));
     },
-    'join calls callback when joins are done': function() {
+    'join calls callback when joins is done': function() {
         var obj = fake(['on', 'setEncoding', 'connect', 'write']);
         var irc = new IRC(obj);
         irc._username = 'foo';
@@ -165,12 +178,49 @@ module.exports = {
         data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
         data(':foo!bar@somewhere.com JOIN :#testorama\r\n');
         assert.ok(eventEmitted);
+        assert.equal(0, irc.listeners('join').length);
     },
-    // 'join with multiple sends join with list': function() {
-    //     var obj = fake(['on', 'setEncoding', 'connect', 'write']);
-    //     var irc = new IRC(obj);
-    //     var eventEmitted = false;
-    //     irc.join('#testorama', '#testo', '&foo');
-    //     assert.ok(obj.write.history.last()[0].match(/^JOIN #testorama,#testo,&foo\r\n/));
-    // },
+    'nick sends nick to server': function() {
+        var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+        var irc = new IRC(obj);
+        irc._username = 'foo';
+        irc.nick('bar');
+        data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
+        data(':foo!bar@somewhere.com NICK bar\r\n');
+        assert.ok(obj.write.history.last()[0].match(/^NICK bar\r\n/));
+        assert.equal(0, irc.listeners('nick-inuse').length);
+        assert.equal(0, irc.listeners('nick-change').length);
+    },
+    'nick calls callback when nick change is done': function() {
+        var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+        var irc = new IRC(obj);
+        irc._username = 'foo';
+        var eventEmitted = false;
+        irc.nick('bar', function(oldnick, newnick) {
+            eventEmitted = true;
+            assert.equal('foo', oldnick);
+            assert.equal('bar', newnick);
+        });
+        data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
+        data(':foo!bar@somewhere.com NICK bar\r\n');
+        assert.ok(eventEmitted);
+        assert.equal(0, irc.listeners('nick-inuse').length);
+        assert.equal(0, irc.listeners('nick-change').length);
+    },
+    'nick calls callback with null newnick when nick change yielsl nick_in_use': function() {
+        var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+        var irc = new IRC(obj);
+        irc._username = 'foo';
+        var eventEmitted = false;
+        irc.nick('bar', function(oldnick, newnick) {
+            eventEmitted = true;
+            assert.equal('foo', oldnick);
+            assert.equal(null, newnick);
+        });
+        data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
+        data(':irc.foo.bar 433 foo bar :Nickname is already in use.\r\n');
+        assert.ok(eventEmitted);
+        assert.equal(0, irc.listeners('nick-inuse').length);
+        assert.equal(0, irc.listeners('nick-change').length);
+    },
 };
