@@ -1,7 +1,6 @@
 var net = require('net');
 var util = require('util');
 var events = require('events');
-var delegate = require('./delegate').delegate;
 var private = require('./proto').private;
 var public = require('./proto').public;
 
@@ -16,22 +15,22 @@ function IRC(server, port) {
     this._server = server;
     this._port = port;
     this._socket.setEncoding('ascii');
-    this._socket.on('connect', delegate(this, function() {
+    this._socket.on('connect', function() {
         this._socket.write('NICK ' + this._username + '\r\n');
         this._socket.write('USER ' + this._username + ' client homelien :Foo Bar\r\n');        
-    }));
-    this._socket.on('close', delegate(this, function(had_error) {
+    }.bind(this));
+    this._socket.on('close', function(had_error) {
         console.log('server socket closed');
-    }));
-    this._socket.on('end', delegate(this, function() {
+    }.bind(this));
+    this._socket.on('end', function() {
         console.log('server socket end');
-    }));
-    this._socket.on('error', delegate(this, function(exception) {
+    }.bind(this));
+    this._socket.on('error', function(exception) {
         console.log('server socket error');
         console.log(exception);
-    }));
+    }.bind(this));
     var overflow = '';
-    this._socket.on('data', delegate(this, function(data) {
+    this._socket.on('data', function(data) {
         data = overflow + data;
         var lastCrlf = data.lastIndexOf('\r\n');
         if (lastCrlf == -1) {
@@ -45,7 +44,7 @@ function IRC(server, port) {
             var line = lines[i].trim();
             if (line.length > 0) this._processServerMessage.call(this, lines[i]);
         }
-    }));
+    }.bind(this));
 }
 util.inherits(IRC, events.EventEmitter);
 public(IRC.prototype, {
@@ -56,33 +55,33 @@ public(IRC.prototype, {
     join: function(channel, callback) {
         this._socket.write('JOIN ' + channel + '\r\n');
         if (typeof callback === 'function') {
-            var handler = delegate(this, function(who, where) {
+            var handler = function(who, where) {
                 if (who == this._username && where == channel) {
                     this.removeListener('join', handler);
                     callback();
                 }
-            });
+            }.bind(this);
             this.on('join', handler);
         }
     },
     nick: function(newnick, callback) {
         this._socket.write('NICK ' + newnick + '\r\n');
-        var changeHandler = delegate(this, function(oldn, newn) {
+        var changeHandler = function(oldn, newn) {
             if (oldn == this._username && newn == newnick) {
                 this.removeListener('nick-change', changeHandler);
                 this.removeListener('nick-inuse', inuseHandler);
                 this._username = newnick;
                 if (typeof callback === 'function') callback(oldn, newn);
             }
-        });
-        var inuseHandler = delegate(this, function(oldn, newn, reason) {
+        }.bind(this);
+        var inuseHandler = function(oldn, newn, reason) {
             if (oldn == this._username && newn == newnick) {
                 this.removeListener('nick-change', changeHandler);
                 this.removeListener('nick-inuse', inuseHandler);
                 this._username = newnick;
                 if (typeof callback === 'function') callback(oldn, null);
             }
-        });
+        }.bind(this);
         this.on('nick-change', changeHandler);
         this.on('nick-inuse', inuseHandler);
     },
