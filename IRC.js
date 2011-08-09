@@ -155,6 +155,40 @@ public(IRC.prototype, {
             }.bind(this)
         });
     },
+    mode: function(target, modes, mask, callback) {
+        var maskString = typeof mask == 'string' ? mask : undefined;
+        var cb = typeof mask == 'function' ? mask : callback;
+        this._socket.write('MODE ' + target + ' ' + modes + (maskString ? ' ' + maskString : '') + '\r\n');
+        this._intercept({
+            'mode': function(who_, target_, modes_, mask_) {
+                if (who_ == this._username && 
+                    target_ == target &&
+                    modes_ == modes &&
+                    mask_ == maskString) {
+                    if (typeof cb == 'function') cb();
+                    return true;
+                }
+            }.bind(this),
+            'errorcode': function(code, to, reason) {
+                if (['ERR_CHANOPRIVSNEEDED',
+                     'ERR_NOSUCHNICK',
+                     'ERR_NOTONCHANNEL',
+                     'ERR_KEYSET',
+                     'ERR_UNKNOWNMODE',
+                     'ERR_NOSUCHCHANNEL',
+                     'ERR_USERSDONTMATCH',
+                     'ERR_UMODEUNKNOWNFLAG'].indexOf(code) != -1) {
+                    if (typeof cb == 'function') cb(false, reason);
+                    return true;
+                }
+                else if (code == 'ERR_NEEDMOREPARAMS' &&
+                         regarding == 'JOIN') {
+                    if (typeof cb == 'function') cb(false, reason);
+                    return true;
+                }
+            }
+        });
+    },
     privmsg: function(to, message) {
         this._socket.write('PRIVMSG ' + to + ' :' + message + '\r\n');
     },

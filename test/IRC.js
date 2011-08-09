@@ -403,4 +403,40 @@ module.exports = {
         data(':irc.homelien.no 366 muppetty #foobartest :End of /NAMES list.\r\n');
         assert.ok(eventEmitted);
     },
+    'mode +i on channel sends mode command to server': function() {
+        var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+        var irc = new IRC(obj);
+        irc.mode('#test', '+i');
+        assert.ok(obj.write.history.last()[0].match(/^MODE #test \+i\r\n/));
+    },
+    'mode +i on channel calls callback when mode is set': function() {
+        var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+        var irc = new IRC(obj);
+        irc._username = 'foo';
+        var eventEmitted = false;
+        irc.mode('#test', '+i', function() {
+            eventEmitted = true;
+        });
+        data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
+        data(':foo!bar@somewhere.com MODE #test +i\r\n');
+        assert.ok(eventEmitted);
+    },
+    'mode +b user!ident@host on channel sends mode command to server': function() {
+        var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+        var irc = new IRC(obj);
+        irc.mode('#test', '+b', 'user!ident@host');
+        assert.ok(obj.write.history.last()[0].match(/^MODE #test \+b user!ident@host\r\n/));
+    },
+    'mode +b user!ident@host on channel calls callback when mode is set': function() {
+        var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+        var irc = new IRC(obj);
+        irc._username = 'foo';
+        var eventEmitted = false;
+        irc.mode('#test', '+b', 'user!ident@host', function() {
+            eventEmitted = true;
+        });
+        data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
+        data(':foo!bar@somewhere.com MODE #test +b user!ident@host\r\n');
+        assert.ok(eventEmitted);
+    },
 };
