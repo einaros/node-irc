@@ -287,8 +287,9 @@ module.exports = {
         var irc = new IRC(obj);
         irc._username = 'foo';
         var eventEmitted = false;
-        irc.join('#testorama', function() {
+        irc.join('#testorama', function(error) {
             eventEmitted = true;
+            assert.ok(!error);
         });
         data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
         data(':foo!bar@somewhere.com JOIN :#testorama\r\n');
@@ -307,9 +308,9 @@ module.exports = {
         var irc = new IRC(obj);
         irc._username = 'foo';
         var eventEmitted = false;
-        irc.kick('#testorama', 'bar', 'some message', function(success) {
+        irc.kick('#testorama', 'bar', 'some message', function(error) {
             eventEmitted = true;
-            assert.ok(success);
+            assert.ok(!error);
         });
         data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
         data(':foo!bar@somewhere.com KICK #testorama bar :some message\r\n');
@@ -320,9 +321,8 @@ module.exports = {
         var irc = new IRC(obj);
         irc._username = 'foo';
         var eventEmitted = false;
-        irc.kick('#testorama', 'bar', 'some message', function(success, error) {
+        irc.kick('#testorama', 'bar', 'some message', function(error) {
             eventEmitted = true;
-            assert.equal(false, success);
             assert.equal('You\'re not channel operator', error);
         });
         data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
@@ -340,8 +340,9 @@ module.exports = {
         var irc = new IRC(obj);
         irc._username = 'foo';
         var eventEmitted = false;
-        irc.nick('bar', function(oldnick, newnick) {
+        irc.nick('bar', function(error, oldnick, newnick) {
             eventEmitted = true;
+            assert.ok(!error);
             assert.equal('foo', oldnick);
             assert.equal('bar', newnick);
         });
@@ -349,15 +350,14 @@ module.exports = {
         data(':foo!bar@somewhere.com NICK :bar\r\n');
         assert.ok(eventEmitted);
     },
-    'nick calls callback with null newnick when nick change yields nick_in_use': function() {
+    'nick calls callback indicating error when nick change yields nick_in_use': function() {
         var obj = fake(['on', 'setEncoding', 'connect', 'write']);
         var irc = new IRC(obj);
         irc._username = 'foo';
         var eventEmitted = false;
-        irc.nick('bar', function(oldnick, newnick) {
+        irc.nick('bar', function(error, oldnick, newnick) {
             eventEmitted = true;
-            assert.equal('foo', oldnick);
-            assert.equal(null, newnick);
+            assert.equal('Nickname is already in use.', error);
         });
         data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
         data(':irc.foo.bar 433 foo bar :Nickname is already in use.\r\n');
@@ -368,13 +368,15 @@ module.exports = {
         var irc = new IRC(obj);
         irc._username = 'foo';
         var eventEmitted = 0;
-        irc.nick('bar', function(oldnick, newnick) {
+        irc.nick('bar', function(error, oldnick, newnick) {
             eventEmitted++;
+            assert.ok(!error);
             assert.equal('foo', oldnick);
             assert.equal('bar', newnick);
         });
-        irc.nick('baz', function(oldnick, newnick) {
+        irc.nick('baz', function(error, oldnick, newnick) {
             eventEmitted++;
+            assert.ok(!error);
             assert.equal('bar', oldnick);
             assert.equal('baz', newnick);
         });
@@ -393,8 +395,9 @@ module.exports = {
         var obj = fake(['on', 'setEncoding', 'connect', 'write']);
         var irc = new IRC(obj);
         var eventEmitted = false;
-        irc.names('#foobartest', function(names) {
+        irc.names('#foobartest', function(error, names) {
             eventEmitted = true;
+            assert.ok(!error);
             assert.equal(JSON.stringify(['muppetty', '@foo', '@bar', '+baz', 'bam']), JSON.stringify(names));
         });
         data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
@@ -414,8 +417,9 @@ module.exports = {
         var irc = new IRC(obj);
         irc._username = 'foo';
         var eventEmitted = false;
-        irc.mode('#test', '+i', function() {
+        irc.mode('#test', '+i', function(error) {
             eventEmitted = true;
+            assert.ok(!error);
         });
         data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
         data(':foo!bar@somewhere.com MODE #test +i\r\n');
@@ -432,8 +436,9 @@ module.exports = {
         var irc = new IRC(obj);
         irc._username = 'foo';
         var eventEmitted = false;
-        irc.mode('#test', '+b', 'user!ident@host', function() {
+        irc.mode('#test', '+b', 'user!ident@host', function(error) {
             eventEmitted = true;
+            assert.ok(!error);
         });
         data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
         data(':foo!bar@somewhere.com MODE #test +b user!ident@host\r\n');

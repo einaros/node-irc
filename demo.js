@@ -13,6 +13,22 @@ irc.on('connected', function(server) {
         });
     });
 });
+irc.on('join', function(who, where) {
+   if (where == '#foobartest') {
+       irc.kick(where, who, function(success, error) {
+           if (!success) {
+               console.log('error kicking user: ' + error);
+               return;
+           }
+           irc.mode(where, '+b', who + '!*@*', function(success, error) {
+               if (!success) {
+                   console.log('error banning user: ' + error);
+                   return;
+               }               
+           });
+       });
+   } 
+});
 irc.on('quit', function(who, message) {
     console.log(who + ' quit: ' + message);
 });

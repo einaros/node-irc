@@ -86,12 +86,12 @@ public(IRC.prototype, {
                      'ERR_BADCHANMASK',
                      'ERR_NOSUCHCHANNEL',
                      'ERR_TOOMANYCHANNELS'].indexOf(code) != -1) {
-                    if (typeof callback == 'function') callback(false, error);
+                    if (typeof callback == 'function') callback(error);
                     return true;
                 }
                 else if (code == 'ERR_NEEDMOREPARAMS' &&
                          regarding == 'JOIN') {
-                    if (typeof callback == 'function') callback(false, error);
+                    if (typeof callback == 'function') callback(error);
                     return true;
                 }
             }
@@ -102,7 +102,7 @@ public(IRC.prototype, {
         this._intercept({
             'kick': function(who_, where_, target_, why_) {
                 if (who_ == this._username && where_ == where && target_ == target) {
-                    if (typeof callback == 'function') callback(true);
+                    if (typeof callback == 'function') callback();
                     return true;
                 }
             }.bind(this),
@@ -112,12 +112,12 @@ public(IRC.prototype, {
                      'ERR_CHANOPRIVSNEEDED',
                      'ERR_NOTONCHANNEL'].indexOf(code) != -1 &&
                     regarding == where) {
-                    if (typeof callback == 'function') callback(false, error);
+                    if (typeof callback == 'function') callback(error);
                     return true;
                 }
                 else if (code == 'ERR_NEEDMOREPARAMS' &&
                          regarding == 'KICK') {
-                    if (typeof callback == 'function') callback(false, error);
+                    if (typeof callback == 'function') callback(error);
                     return true;
                 }
             }.bind(this)
@@ -128,7 +128,7 @@ public(IRC.prototype, {
         this._intercept({
             'names': function(where, names) {
                 if (where == channel) {
-                    if (typeof callback == 'function') callback(names);
+                    if (typeof callback == 'function') callback(undefined, names);
                     return true;
                 }
             }.bind(this),
@@ -140,7 +140,7 @@ public(IRC.prototype, {
             'nick-change': function(oldn, newn) {
                 if (oldn == this._username && newn == newnick) {
                     this._username = newnick;
-                    if (typeof callback == 'function') callback(oldn, newn);
+                    if (typeof callback == 'function') callback(undefined, oldn, newn);
                     return true;
                 }
             }.bind(this),
@@ -149,7 +149,7 @@ public(IRC.prototype, {
                      'ERR_ERRONEUSNICKNAME',
                      'ERR_NICKNAMEINUSE',
                      'ERR_NICKCOLLISION'].indexOf(code) != -1) {
-                    if (typeof callback == 'function') callback(to, null);
+                    if (typeof callback == 'function') callback(reason);
                     return true;
                 }
             }.bind(this)
@@ -165,7 +165,7 @@ public(IRC.prototype, {
                     target_ == target &&
                     modes_ == modes &&
                     mask_ == maskString) {
-                    if (typeof cb == 'function') cb();
+                    if (typeof cb == 'function') cb(undefined);
                     return true;
                 }
             }.bind(this),
@@ -178,12 +178,12 @@ public(IRC.prototype, {
                      'ERR_NOSUCHCHANNEL',
                      'ERR_USERSDONTMATCH',
                      'ERR_UMODEUNKNOWNFLAG'].indexOf(code) != -1) {
-                    if (typeof cb == 'function') cb(false, reason);
+                    if (typeof cb == 'function') cb(reason);
                     return true;
                 }
                 else if (code == 'ERR_NEEDMOREPARAMS' &&
                          regarding == 'JOIN') {
-                    if (typeof cb == 'function') cb(false, reason);
+                    if (typeof cb == 'function') cb(reason);
                     return true;
                 }
             }
