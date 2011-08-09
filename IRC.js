@@ -79,6 +79,19 @@ public(IRC.prototype, {
                     return true;
                 }
             }.bind(this),
+            'errorcode': function(code, to, reason) {
+                if (['ERR_NEEDMOREPARAMS', 
+                     'ERR_BANNEDFROMCHAN',
+                     'ERR_INVITEONLYCHAN', 
+                     'ERR_BADCHANNELKEY',
+                     'ERR_CHANNELISFULL', 
+                     'ERR_BADCHANMASK',
+                     'ERR_NOSUCHCHANNEL', 
+                     'ERR_TOOMANYCHANNELS'].indexOf(code) != -1) {
+                    if (typeof callback === 'function') callback(false, reason);
+                    return true;                    
+                }
+            }
         });
     },
     kick: function(where, target, why, callback) {
