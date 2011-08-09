@@ -13,4 +13,13 @@ if (typeof Array.prototype.last === 'undefined') {
             return this[this.length - 1];
         }
     });
+    Object.defineProperty(Array.prototype, "has", {
+        enumerable: false,
+        value: function(value) {
+            for (var i = 0; i < this.length; ++i) {
+                if (this[i] == value) return true;
+            }
+            return false;
+        }
+    });
 }
