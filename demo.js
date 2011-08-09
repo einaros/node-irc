@@ -2,8 +2,8 @@ var IRC = require('./IRC').IRC;
 var irc = new IRC('irc.homelien.no', 6667);
 irc.on('connected', function(server) {
     console.log('connected to ' + server);
-    irc.join('#foobartest', function(success, error) {
-        if (!success) {
+    irc.join('#foobartest', function(error) {
+        if (error) {
             console.log('error joining channel: ' + error);
             return;
         }
@@ -14,14 +14,14 @@ irc.on('connected', function(server) {
     });
 });
 irc.on('join', function(who, where) {
-   if (where == '#foobartest') {
-       irc.kick(where, who, function(success, error) {
-           if (!success) {
+   if (where == '#foobartest' && who != irc.me()) {
+       irc.kick(where, who, 'woot', function(error) {
+           if (error) {
                console.log('error kicking user: ' + error);
                return;
            }
-           irc.mode(where, '+b', who + '!*@*', function(success, error) {
-               if (!success) {
+           irc.mode(where, '+b', who + '!*@*', function(error) {
+               if (error) {
                    console.log('error banning user: ' + error);
                    return;
                }               
