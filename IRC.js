@@ -348,7 +348,7 @@ private(IRC.prototype, {
             else console.log('unhandled ctcp: ' + line);
             return;
         }
-        matches = line.match(/(?::([^\s]*)\s)?([^:]{1}[^\s]*)(?:\s([^:]{1}[^\s]*))?(?:\s(?:=\s)?([^:]{1}[^\s]*))?(?:\s:?(.*))?/);
+        matches = line.match(/(?::([^\s]*)\s)?([^:]{1}[^\s]*)(?:\s([^:]{1}[^\s]*))?(?:\s(?:[@=]\s)?([^:]{1}[^\s]*))?(?:\s:?(.*))?/);
         if (matches) {
             var handler = this._messageHandlers[matches[2]];
             var args = [];
