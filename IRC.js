@@ -285,12 +285,10 @@ private(IRC.prototype, {
             this.emit('connected', from);
         },
         /* RPL_NAMRPLY */ '353': function(from, to, where, names) {
-            console.log(arguments);
             this._cache['names'] = this._cache['names'] || {};
             this._cache['names'][where] = (this._cache['names'][where] || []).concat(names.split(' '));
         },
         /* RPL_ENDOFNAMES */ '366': function(from, to, where) {
-            console.log(arguments);
             this.emit('names', where, this._cache['names'][where]);
             delete this._cache['names'][where];
         },
@@ -341,7 +339,6 @@ private(IRC.prototype, {
         },
     },
     _processServerMessage: function(line) {
-        console.log(line);
         var matches = line.match(/^:([^\s]*)\s([^\s]*)\s([^\s]*)\s:\u0001([^\s]*)\s(.*)\u0001/);
         if (matches) {
             var handler = this._messageHandlers['CTCP_' + matches[2] + '_' + matches[4]];
