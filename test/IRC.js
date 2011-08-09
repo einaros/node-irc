@@ -93,6 +93,21 @@ module.exports = {
         data(':baz!bar@somewhere.com PART #test\r\n');
         assert.ok(eventEmitted);
     },
+    'incoming kick causes kick event': function() {
+        var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+        var irc = new IRC(obj);
+        var eventEmitted = false;
+        irc.on('kick', function(who, where, target, message) {
+            eventEmitted = true;
+            assert.equal('baz', who);
+            assert.equal('#test', where);
+            assert.equal('someone', target);
+            assert.equal('some message', message);
+        });
+        data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
+        data(':baz!bar@somewhere.com KICK #test someone :some message\r\n');
+        assert.ok(eventEmitted);
+    },
     'incoming names list causes names event': function() {
         var obj = fake(['on', 'setEncoding', 'connect', 'write']);
         var irc = new IRC(obj);
@@ -223,21 +238,18 @@ module.exports = {
     'ping sends ctcp ping command to server': function() {
         var obj = fake(['on', 'setEncoding', 'connect', 'write']);
         var irc = new IRC(obj);
-        var eventEmitted = false;
         irc.ping('foo');
         assert.ok(obj.write.history.last()[0].match(/^PRIVMSG foo :\u0001PING [0-9\s]*\u0001\r\n/));
     },
     'privmsg sends privmsg command to server': function() {
         var obj = fake(['on', 'setEncoding', 'connect', 'write']);
         var irc = new IRC(obj);
-        var eventEmitted = false;
         irc.privmsg('foo', 'hi there!');
         assert.ok(obj.write.history.last()[0].match(/^PRIVMSG foo :hi there!\r\n/));
     },
     'join sends join command to server': function() {
         var obj = fake(['on', 'setEncoding', 'connect', 'write']);
         var irc = new IRC(obj);
-        var eventEmitted = false;
         irc.join('#testorama');
         assert.ok(obj.write.history.last()[0].match(/^JOIN #testorama\r\n/));
     },
@@ -254,13 +266,45 @@ module.exports = {
         assert.ok(eventEmitted);
         assert.equal(0, irc.listeners('join').length);
     },
+    'kick sends kick command to server': function() {
+        var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+        var irc = new IRC(obj);
+        irc._username = 'foo';
+        irc.kick('#testorama', 'bar', 'some message');
+        assert.ok(obj.write.history.last()[0].match(/^KICK #testorama bar :some message\r\n/));
+    },
+    'kick calls callback when kick is done': function() {
+        var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+        var irc = new IRC(obj);
+        irc._username = 'foo';
+        var eventEmitted = false;
+        irc.kick('#testorama', 'bar', 'some message', function(success) {
+            eventEmitted = true;
+            assert.ok(success);
+        });
+        data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
+        data(':foo!bar@somewhere.com KICK #testorama bar :some message\r\n');
+        assert.ok(eventEmitted);
+    },
+    'kick calls callback indicating error when op is needed': function() {
+        var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+        var irc = new IRC(obj);
+        irc._username = 'foo';
+        var eventEmitted = false;
+        irc.kick('#testorama', 'bar', 'some message', function(success, error) {
+            eventEmitted = true;
+            assert.equal(false, success);
+            assert.equal('You\'re not channel operator', error);
+        });
+        data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
+        data(':irc.foo.bar 482 #testorama :You\'re not channel operator\r\n');
+        assert.ok(eventEmitted);
+    },
     'nick sends nick command to server': function() {
         var obj = fake(['on', 'setEncoding', 'connect', 'write']);
         var irc = new IRC(obj);
         irc.nick('bar');
         assert.ok(obj.write.history.last()[0].match(/^NICK bar\r\n/));
-        assert.equal(0, irc.listeners('nick-inuse').length);
-        assert.equal(0, irc.listeners('nick-change').length);
     },
     'nick calls callback when nick change is done': function() {
         var obj = fake(['on', 'setEncoding', 'connect', 'write']);
@@ -274,28 +318,6 @@ module.exports = {
         });
         data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
         data(':foo!bar@somewhere.com NICK :bar\r\n');
-        assert.ok(eventEmitted);
-        assert.equal(0, irc.listeners('nick-inuse').length);
-        assert.equal(0, irc.listeners('nick-change').length);
-    },
-    'names sends names command to server': function() {
-        var obj = fake(['on', 'setEncoding', 'connect', 'write']);
-        var irc = new IRC(obj);
-        irc.names('#test');
-        assert.ok(obj.write.history.last()[0].match(/^NAMES #test\r\n/));
-    },
-    'names calls callback when name listing is done': function() {
-        var obj = fake(['on', 'setEncoding', 'connect', 'write']);
-        var irc = new IRC(obj);
-        var eventEmitted = false;
-        irc.names('#foobartest', function(names) {
-            eventEmitted = true;
-            assert.equal(JSON.stringify(['muppetty', '@foo', '@bar', '+baz', 'bam']), JSON.stringify(names));
-        });
-        data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
-        data(':irc.homelien.no 353 muppetty = #foobartest :muppetty @foo\r\n');
-        data(':irc.homelien.no 353 muppetty = #foobartest :@bar +baz bam\r\n');
-        data(':irc.homelien.no 366 muppetty #foobartest :End of /NAMES list.\r\n');
         assert.ok(eventEmitted);
     },
     'nick calls callback with null newnick when nick change yields nick_in_use': function() {
@@ -311,8 +333,6 @@ module.exports = {
         data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
         data(':irc.foo.bar 433 foo bar :Nickname is already in use.\r\n');
         assert.ok(eventEmitted);
-        assert.equal(0, irc.listeners('nick-inuse').length);
-        assert.equal(0, irc.listeners('nick-change').length);
     },
     'nick callbacks will stack, not execute in parallell': function() {
         var obj = fake(['on', 'setEncoding', 'connect', 'write']);
@@ -333,5 +353,25 @@ module.exports = {
         data(':foo!bar@somewhere.com NICK bar\r\n');
         data(':bar!bar@somewhere.com NICK baz\r\n');
         assert.equal(2, eventEmitted);
+    },
+    'names sends names command to server': function() {
+        var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+        var irc = new IRC(obj);
+        irc.names('#test');
+        assert.ok(obj.write.history.last()[0].match(/^NAMES #test\r\n/));
+    },
+    'names calls callback when name listing is done': function() {
+        var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+        var irc = new IRC(obj);
+        var eventEmitted = false;
+        irc.names('#foobartest', function(names) {
+            eventEmitted = true;
+            assert.equal(JSON.stringify(['muppetty', '@foo', '@bar', '+baz', 'bam']), JSON.stringify(names));
+        });
+        data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
+        data(':irc.homelien.no 353 muppetty = #foobartest :muppetty @foo\r\n');
+        data(':irc.homelien.no 353 muppetty = #foobartest :@bar +baz bam\r\n');
+        data(':irc.homelien.no 366 muppetty #foobartest :End of /NAMES list.\r\n');
+        assert.ok(eventEmitted);
     },
 };

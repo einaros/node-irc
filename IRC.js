@@ -81,6 +81,27 @@ public(IRC.prototype, {
             }.bind(this),
         });
     },
+    kick: function(where, target, why, callback) {
+        this._socket.write('KICK ' + where + ' ' + target + ' :' + why + '\r\n');
+        this._intercept({
+            'kick': function(who_, where_, target_, why_) {
+                if (who_ == this._username && where_ == where && target_ == target) {
+                    if (typeof callback === 'function') callback(true);
+                    return true;
+                }
+            }.bind(this),
+            'errorcode': function(code, to, reason) {
+                if (['ERR_NEEDMOREPARAMS', 
+                     'ERR_NOSUCHCHANNEL',
+                     'ERR_BADCHANMASK', 
+                     'ERR_CHANOPRIVSNEEDED',
+                     'ERR_NOTONCHANNEL'].indexOf(code) != -1) {
+                    if (typeof callback === 'function') callback(false, reason);
+                    return true;
+                }
+            }.bind(this)
+        });
+    },
     names: function(channel, callback) {
         this._socket.write('NAMES ' + channel + '\r\n');
         this._intercept({
@@ -103,10 +124,10 @@ public(IRC.prototype, {
                 }
             }.bind(this),
             'errorcode': function(code, to, regarding, reason) {
-                if (code === 'ERR_NONICKNAMEGIVEN' ||
-                    code === 'ERR_ERRONEUSNICKNAME' ||
-                    code === 'ERR_NICKNAMEINUSE' ||
-                    code === 'ERR_NICKCOLLISION') {
+                if (['ERR_NONICKNAMEGIVEN',
+                     'ERR_ERRONEUSNICKNAME',
+                     'ERR_NICKNAMEINUSE',
+                     'ERR_NICKCOLLISION'].indexOf(code) != -1) {
                     if (typeof callback === 'function') callback(to, null);
                     return true;
                 }
@@ -226,6 +247,10 @@ private(IRC.prototype, {
         'JOIN': function(who, channel) {
             var identity = parseIdentity(who);
             this.emit('join', identity.nick, channel);
+        },
+        'KICK': function(who, where, target, why) {
+            var identity = parseIdentity(who);
+            this.emit('kick', identity.nick, where, target, why);
         },
         'NICK': function(from, data) {
             // :Angel!foo@bar NICK newnick
