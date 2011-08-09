@@ -2,7 +2,11 @@ var IRC = require('./IRC').IRC;
 var irc = new IRC('irc.homelien.no', 6667);
 irc.on('connected', function(server) {
     console.log('connected to ' + server);
-    irc.join('#foobartest', function() {
+    irc.join('#foobartest', function(success, error) {
+        if (!success) {
+            console.log('error joining channel: ' + error);
+            return;
+        }
         irc.privmsg('#foobartest', 'well hello yall');
         irc.nick('muppetty2', function(old, newn) {
             irc.privmsg('#foobartest', 'I\'m new!');
@@ -22,6 +26,9 @@ irc.on('privmsg', function(from, to, message) {
     console.log('<' + from + '> to ' + to + ': ' + message);
     if (to[0] == '#') irc.privmsg(to, 'public greetings, ' + from);
     else irc.privmsg(from, 'hi!');
+});
+irc.on('mode', function(who, target, modes, mask) {
+    console.log(who + ' set mode ' + modes + (mask ? ' ' + mask : '') + ' on ' + target);
 });
 irc.on('servertext', function(from, to, text) {
     console.log('(' + from + ') ' + text);
