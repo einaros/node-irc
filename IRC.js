@@ -78,7 +78,7 @@ public(IRC.prototype, {
                     return true;
                 }
             }.bind(this),
-            'errorcode': function(code, to, reason) {
+            'errorcode': function(code, who, where, error) {
                 if (['ERR_BANNEDFROMCHAN',
                      'ERR_INVITEONLYCHAN',
                      'ERR_BADCHANNELKEY',
@@ -86,12 +86,12 @@ public(IRC.prototype, {
                      'ERR_BADCHANMASK',
                      'ERR_NOSUCHCHANNEL',
                      'ERR_TOOMANYCHANNELS'].indexOf(code) != -1) {
-                    if (typeof callback == 'function') callback(false, reason);
+                    if (typeof callback == 'function') callback(false, error);
                     return true;
                 }
                 else if (code == 'ERR_NEEDMOREPARAMS' &&
                          regarding == 'JOIN') {
-                    if (typeof callback == 'function') callback(false, reason);
+                    if (typeof callback == 'function') callback(false, error);
                     return true;
                 }
             }
@@ -106,18 +106,18 @@ public(IRC.prototype, {
                     return true;
                 }
             }.bind(this),
-            'errorcode': function(code, regarding, reason) {
+            'errorcode': function(code, regarding, error) {
                 if (['ERR_NOSUCHCHANNEL',
                      'ERR_BADCHANMASK',
                      'ERR_CHANOPRIVSNEEDED',
                      'ERR_NOTONCHANNEL'].indexOf(code) != -1 &&
                     regarding == where) {
-                    if (typeof callback == 'function') callback(false, reason);
+                    if (typeof callback == 'function') callback(false, error);
                     return true;
                 }
                 else if (code == 'ERR_NEEDMOREPARAMS' &&
                          regarding == 'KICK') {
-                    if (typeof callback == 'function') callback(false, reason);
+                    if (typeof callback == 'function') callback(false, error);
                     return true;
                 }
             }.bind(this)
