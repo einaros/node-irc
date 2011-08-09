@@ -3,14 +3,13 @@ var util = require('util');
 var events = require('events');
 var private = require('./proto').private;
 var public = require('./proto').public;
-
 function IRC(server, port) {
     events.EventEmitter.call(this);
-    if (typeof server === 'object') {
+    if (typeof server == 'object') {
         this._socket = server;
     }
     else {
-        this._socket = new net.Socket();        
+        this._socket = new net.Socket();
     }
     this._server = server;
     this._port = port;
@@ -22,7 +21,7 @@ function IRC(server, port) {
             var interceptorArray = this._interceptorMap[event];
             if (interceptorArray && interceptorArray.length > 0) {
                 for (var i = 0; i < interceptorArray.length; ++i) {
-                    if (interceptorArray[i][event].apply(this, 
+                    if (interceptorArray[i][event].apply(this,
                         Array.prototype.slice.call(arguments, 1)) === true) {
                         interceptorArray[i].__remove();
                         break;
@@ -35,7 +34,7 @@ function IRC(server, port) {
     this._socket.setEncoding('ascii');
     this._socket.on('connect', function() {
         this._socket.write('NICK ' + this._username + '\r\n');
-        this._socket.write('USER ' + this._username + ' client homelien :Foo Bar\r\n');        
+        this._socket.write('USER ' + this._username + ' client homelien :Foo Bar\r\n');
     }.bind(this));
     this._socket.on('close', function(had_error) {
         console.log('server socket closed');
@@ -75,21 +74,25 @@ public(IRC.prototype, {
         this._intercept({
             'join': function(who, where) {
                 if (who == this._username && where == channel) {
-                    if (typeof callback === 'function') callback();
+                    if (typeof callback == 'function') callback();
                     return true;
                 }
             }.bind(this),
             'errorcode': function(code, to, reason) {
-                if (['ERR_NEEDMOREPARAMS', 
-                     'ERR_BANNEDFROMCHAN',
-                     'ERR_INVITEONLYCHAN', 
+                if (['ERR_BANNEDFROMCHAN',
+                     'ERR_INVITEONLYCHAN',
                      'ERR_BADCHANNELKEY',
-                     'ERR_CHANNELISFULL', 
+                     'ERR_CHANNELISFULL',
                      'ERR_BADCHANMASK',
-                     'ERR_NOSUCHCHANNEL', 
+                     'ERR_NOSUCHCHANNEL',
                      'ERR_TOOMANYCHANNELS'].indexOf(code) != -1) {
-                    if (typeof callback === 'function') callback(false, reason);
-                    return true;                    
+                    if (typeof callback == 'function') callback(false, reason);
+                    return true;
+                }
+                else if (code == 'ERR_NEEDMOREPARAMS' &&
+                         regarding == 'JOIN') {
+                    if (typeof callback == 'function') callback(false, reason);
+                    return true;
                 }
             }
         });
@@ -99,17 +102,22 @@ public(IRC.prototype, {
         this._intercept({
             'kick': function(who_, where_, target_, why_) {
                 if (who_ == this._username && where_ == where && target_ == target) {
-                    if (typeof callback === 'function') callback(true);
+                    if (typeof callback == 'function') callback(true);
                     return true;
                 }
             }.bind(this),
-            'errorcode': function(code, to, reason) {
-                if (['ERR_NEEDMOREPARAMS', 
-                     'ERR_NOSUCHCHANNEL',
-                     'ERR_BADCHANMASK', 
+            'errorcode': function(code, regarding, reason) {
+                if (['ERR_NOSUCHCHANNEL',
+                     'ERR_BADCHANMASK',
                      'ERR_CHANOPRIVSNEEDED',
-                     'ERR_NOTONCHANNEL'].indexOf(code) != -1) {
-                    if (typeof callback === 'function') callback(false, reason);
+                     'ERR_NOTONCHANNEL'].indexOf(code) != -1 &&
+                    regarding == where) {
+                    if (typeof callback == 'function') callback(false, reason);
+                    return true;
+                }
+                else if (code == 'ERR_NEEDMOREPARAMS' &&
+                         regarding == 'KICK') {
+                    if (typeof callback == 'function') callback(false, reason);
                     return true;
                 }
             }.bind(this)
@@ -120,7 +128,7 @@ public(IRC.prototype, {
         this._intercept({
             'names': function(where, names) {
                 if (where == channel) {
-                    if (typeof callback === 'function') callback(names);
+                    if (typeof callback == 'function') callback(names);
                     return true;
                 }
             }.bind(this),
@@ -132,7 +140,7 @@ public(IRC.prototype, {
             'nick-change': function(oldn, newn) {
                 if (oldn == this._username && newn == newnick) {
                     this._username = newnick;
-                    if (typeof callback === 'function') callback(oldn, newn);
+                    if (typeof callback == 'function') callback(oldn, newn);
                     return true;
                 }
             }.bind(this),
@@ -141,7 +149,7 @@ public(IRC.prototype, {
                      'ERR_ERRONEUSNICKNAME',
                      'ERR_NICKNAMEINUSE',
                      'ERR_NICKCOLLISION'].indexOf(code) != -1) {
-                    if (typeof callback === 'function') callback(to, null);
+                    if (typeof callback == 'function') callback(to, null);
                     return true;
                 }
             }.bind(this)
@@ -156,7 +164,7 @@ public(IRC.prototype, {
     quit: function(message) {
         this._socket.write('QUIT :' + message + '\r\n');
         this._socket.close();
-    }    
+    }
 });
 private(IRC.prototype, {
     // stacks an interceptor for the given set of events
@@ -173,7 +181,7 @@ private(IRC.prototype, {
         });
         for (var event in interceptor) {
             var interceptorStack = this._interceptorMap[event];
-            if (typeof interceptorStack === 'undefined') {
+            if (typeof interceptorStack == 'undefined') {
                 interceptorStack = this._interceptorMap[event] = [];
             }
             interceptorStack.push(interceptor);
@@ -229,7 +237,6 @@ private(IRC.prototype, {
         '491': 'ERR_NOOPERHOST',
         '501': 'ERR_UMODEUNKNOWNFLAG',
         '502': 'ERR_USERSDONTMATCH',
-        
         // Server messages
         /* RPL_MOTDSTART */ '375': function() {
             return this._messageHandlers['372'].apply(this, arguments);
@@ -307,8 +314,8 @@ private(IRC.prototype, {
             for (var i = 1; i < matches.length; ++i) {
                 if (i != 2 && typeof matches[i] !== 'undefined') args.push(matches[i]);
             }
-            if (typeof handler === 'function') handler.apply(this, args);
-            else if (typeof handler === 'string') {
+            if (typeof handler == 'function') handler.apply(this, args);
+            else if (typeof handler == 'string') {
                 args.unshift(handler);
                 this._errorHandler.apply(this, args);
             }
@@ -320,7 +327,6 @@ private(IRC.prototype, {
     }
 });
 exports.IRC = IRC;
-
 function parseIdentity(identity) {
     var parsed = identity.match(/:?(.*?)(?:$|!)(?:(.*)@(.*))?/);
     return {
