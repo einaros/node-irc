@@ -108,6 +108,35 @@ module.exports = {
         data(':baz!bar@somewhere.com KICK #test someone :some message\r\n');
         assert.ok(eventEmitted);
     },
+    'incoming mode causes mode event': function() {
+        var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+        var irc = new IRC(obj);
+        var eventEmitted = false;
+        irc.on('mode', function(who, target, modes, mask) {
+            eventEmitted = true;
+            assert.equal('foo', who);
+            assert.equal('#test', target);
+            assert.equal('+b', modes);
+            assert.equal('bar!*@*', mask);
+        });
+        data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
+        data(':foo!bar@somewhere.com MODE #test +b bar!*@*\r\n');
+        assert.ok(eventEmitted);
+    },
+    'incoming user mode causes mode event': function() {
+        var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+        var irc = new IRC(obj);
+        var eventEmitted = false;
+        irc.on('mode', function(who, target, modes, mask) {
+            eventEmitted = true;
+            assert.equal('foo', who);
+            assert.equal('foo', target);
+            assert.equal('+i', modes);
+        });
+        data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
+        data(':foo!bar@somewhere.com MODE foo +i\r\n');
+        assert.ok(eventEmitted);
+    },
     'incoming names list causes names event': function() {
         var obj = fake(['on', 'setEncoding', 'connect', 'write']);
         var irc = new IRC(obj);

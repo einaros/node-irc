@@ -260,6 +260,10 @@ private(IRC.prototype, {
             this._socket.write('PONG :' + from + '\r\n');
         },
         // Client messages
+        'MODE': function(who, target, modes, mask) {
+            var identity = parseIdentity(who);
+            this.emit('mode', identity.nick, target, modes, mask);
+        },
         'PRIVMSG': function(from, to, message) {
             var identity = parseIdentity(from);
             this.emit('privmsg', identity.nick, to, message);
@@ -307,7 +311,7 @@ private(IRC.prototype, {
             else console.log('unhandled ctcp: ' + line);
             return;
         }
-        matches = line.match(/(?::([^\s]*)\s)?([^:]{1}[^\s]*)(?:\s([^:]{1}[^\s]*))?(?:\s(?:=\s)?([^:]{1}[^\s]*))?(?:\s:(.*))?/);
+        matches = line.match(/(?::([^\s]*)\s)?([^:]{1}[^\s]*)(?:\s([^:]{1}[^\s]*))?(?:\s(?:=\s)?([^:]{1}[^\s]*))?(?:\s:?(.*))?/);
         if (matches) {
             var handler = this._messageHandlers[matches[2]];
             var args = [];
