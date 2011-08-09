@@ -152,17 +152,11 @@ module.exports = {
         data(':irc.homelien.no 366 muppetty #foobartest :End of /NAMES list.\r\n');
         assert.ok(eventEmitted);
     },
-    'incoming server ping causes pong and ping event': function() {
+    'incoming server ping causes pong': function() {
         var obj = fake(['on', 'setEncoding', 'connect', 'write']);
         var irc = new IRC(obj);
-        var eventEmitted = false;
-        irc.on('ping', function(from) {
-            eventEmitted = true;
-            assert.equal('irc.foo.bar', from);
-        });
         data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
         data('PING :irc.foo.bar\r\n');
-        assert.ok(eventEmitted);
         assert.equal('PONG :irc.foo.bar\r\n', obj.write.history.last()[0]);
     },
     'incoming ctcp ping causes ping event': function() {
@@ -326,7 +320,7 @@ module.exports = {
             assert.equal('You\'re not channel operator', error);
         });
         data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
-        data(':irc.foo.bar 482 #testorama :You\'re not channel operator\r\n');
+        data(':irc.foo.bar 482 foo #testorama :You\'re not channel operator\r\n');
         assert.ok(eventEmitted);
     },
     'nick sends nick command to server': function() {

@@ -1,8 +1,10 @@
+require('./array');
 var net = require('net');
 var util = require('util');
 var events = require('events');
 var private = require('./proto').private;
 var public = require('./proto').public;
+
 function IRC(server, port) {
     events.EventEmitter.call(this);
     if (typeof server == 'object') {
@@ -82,13 +84,10 @@ public(IRC.prototype, {
                 }
             }.bind(this),
             'errorcode': function(code, who, where, error) {
-                if (['ERR_BANNEDFROMCHAN',
-                     'ERR_INVITEONLYCHAN',
-                     'ERR_BADCHANNELKEY',
-                     'ERR_CHANNELISFULL',
-                     'ERR_BADCHANMASK',
-                     'ERR_NOSUCHCHANNEL',
-                     'ERR_TOOMANYCHANNELS'].indexOf(code) != -1) {
+                // todo: some of these probably get the wrong params
+                if (['ERR_BANNEDFROMCHAN', 'ERR_INVITEONLYCHAN', 'ERR_BADCHANNELKEY',
+                     'ERR_CHANNELISFULL', 'ERR_BADCHANMASK', 'ERR_NOSUCHCHANNEL',
+                     'ERR_TOOMANYCHANNELS'].has(code)) {
                     if (typeof callback == 'function') callback(error);
                     return true;
                 }
@@ -109,17 +108,16 @@ public(IRC.prototype, {
                     return true;
                 }
             }.bind(this),
-            'errorcode': function(code, regarding, error) {
-                if (['ERR_NOSUCHCHANNEL',
-                     'ERR_BADCHANMASK',
-                     'ERR_CHANOPRIVSNEEDED',
-                     'ERR_NOTONCHANNEL'].indexOf(code) != -1 &&
-                    regarding == where) {
+            'errorcode': function(code, who_, where_, error) {
+                // todo: some of these probably get the wrong params
+                if (['ERR_NOSUCHCHANNEL', 'ERR_BADCHANMASK', 'ERR_CHANOPRIVSNEEDED',
+                     'ERR_NOTONCHANNEL'].has(code) && 
+                     where_ == where && who_ == this._username) {
                     if (typeof callback == 'function') callback(error);
                     return true;
                 }
                 else if (code == 'ERR_NEEDMOREPARAMS' &&
-                         regarding == 'KICK') {
+                         where_ == 'KICK') {
                     if (typeof callback == 'function') callback(error);
                     return true;
                 }
@@ -147,11 +145,12 @@ public(IRC.prototype, {
                     return true;
                 }
             }.bind(this),
-            'errorcode': function(code, to, regarding, reason) {
-                if (['ERR_NONICKNAMEGIVEN',
-                     'ERR_ERRONEUSNICKNAME',
-                     'ERR_NICKNAMEINUSE',
-                     'ERR_NICKCOLLISION'].indexOf(code) != -1) {
+            'errorcode': function(code, who, regarding, reason) {
+                if (['ERR_NONICKNAMEGIVEN'].has(code)) {
+                    if (typeof callback == 'function') callback(regarding);
+                    return true;
+                }
+                else if(['ERR_NICKNAMEINUSE', 'ERR_NICKCOLLISION', 'ERR_ERRONEUSNICKNAME'].has(code)) {
                     if (typeof callback == 'function') callback(reason);
                     return true;
                 }
@@ -173,14 +172,10 @@ public(IRC.prototype, {
                 }
             }.bind(this),
             'errorcode': function(code, to, reason) {
-                if (['ERR_CHANOPRIVSNEEDED',
-                     'ERR_NOSUCHNICK',
-                     'ERR_NOTONCHANNEL',
-                     'ERR_KEYSET',
-                     'ERR_UNKNOWNMODE',
-                     'ERR_NOSUCHCHANNEL',
-                     'ERR_USERSDONTMATCH',
-                     'ERR_UMODEUNKNOWNFLAG'].indexOf(code) != -1) {
+                // todo: some of these probably get the wrong params
+                if (['ERR_CHANOPRIVSNEEDED', 'ERR_NOSUCHNICK', 'ERR_NOTONCHANNEL',
+                     'ERR_KEYSET', 'ERR_UNKNOWNMODE', 'ERR_NOSUCHCHANNEL', 
+                     'ERR_USERSDONTMATCH', 'ERR_UMODEUNKNOWNFLAG'].has(code)) {
                     if (typeof cb == 'function') cb(reason);
                     return true;
                 }
@@ -293,7 +288,6 @@ private(IRC.prototype, {
             delete this._cache['names'][where];
         },
         'PING': function(from) {
-            this.emit('ping', from);
             this._socket.write('PONG :' + from + '\r\n');
         },
         // Client messages
