@@ -14,6 +14,7 @@ irc.on('connected', function(server) {
     });
 });
 irc.on('join', function(who, where) {
+   console.log(who + ' joined ' + where);
    if (where == '#foobartest' && who != irc.me()) {
        irc.kick(where, who, 'woot', function(error) {
            if (error) {
@@ -34,6 +35,9 @@ irc.on('quit', function(who, message) {
 });
 irc.on('part', function(who, channel) {
     console.log(who + ' left ' + channel);
+});
+irc.on('kick', function(who, channel, target, message) {
+    console.log(target + ' was kicked from ' + channel + ' by ' + who + ': ' + message);
 });
 irc.on('names', function(channel, names) {
     console.log(channel + ' users: ' + names);
