@@ -54,11 +54,11 @@ module.exports = {
         data(':foo!bar@somewhere.com JOIN :#channel\r\n');
         assert.ok(eventEmitted);
     },
-    'incoming nick causes nick-change event': function() {
+    'incoming nick causes nick event': function() {
         var obj = fake(['on', 'setEncoding', 'connect', 'write']);
         var irc = new IRC(obj);
         var eventEmitted = false;
-        irc.on('nick-change', function(oldnick, newnick) {
+        irc.on('nick', function(oldnick, newnick) {
             eventEmitted = true;
             assert.equal('foo', oldnick);
             assert.equal('bar', newnick);

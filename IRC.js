@@ -138,7 +138,7 @@ public(IRC.prototype, {
     nick: function(newnick, callback) {
         this._socket.write('NICK ' + newnick + '\r\n');
         this._intercept({
-            'nick-change': function(oldn, newn) {
+            'nick': function(oldn, newn) {
                 if (oldn == this._username && newn == newnick) {
                     this._username = newnick;
                     if (typeof callback == 'function') callback(undefined, oldn, newn);
@@ -312,7 +312,7 @@ private(IRC.prototype, {
             var identity = parseIdentity(from);
             var data = data.match(/:?(.*)/);
             if (!data) throw 'invalid NICK structure';
-            this.emit('nick-change', identity.nick, data[1]);
+            this.emit('nick', identity.nick, data[1]);
         },
         'PART': function(who, where) {
             var identity = parseIdentity(who);
