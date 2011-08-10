@@ -7,7 +7,7 @@ var public = require('./lib/proto').public;
 
 function IRC(server, port) {
     events.EventEmitter.call(this);
-    if (typeof server == 'object') {
+    if (typeof server == 'object') {
         private(this, {_socket: server}, true);
     }
     else {
