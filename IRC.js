@@ -20,6 +20,7 @@ function IRC(server, port) {
        _cache: {},
        _callQueue: {},
        _eventPreInterceptorMap: {},
+       _debugLevel: 2
     }, true);
     var realEmit = this.emit;
     this.emit = function(event) {
@@ -43,14 +44,13 @@ function IRC(server, port) {
         this._socket.write('USER ' + this._username + ' client homelien :Foo Bar\r\n');
     }.bind(this));
     this._socket.on('close', function(had_error) {
-        console.log('server socket closed');
+        this._debug(3, 'Server socket closed');
     }.bind(this));
     this._socket.on('end', function() {
-        console.log('server socket end');
+        this._debug(3, 'Server socket end');
     }.bind(this));
     this._socket.on('error', function(exception) {
-        console.log('server socket error');
-        console.log(exception);
+        this._debug(1, 'Server socket error', exception);
     }.bind(this));
     var overflow = '';
     this._socket.on('data', function(data) {
@@ -232,9 +232,18 @@ public(IRC.prototype, {
     quit: function(message) {
         this._socket.write('QUIT :' + message + '\r\n');
         this._socket.close();
+    },
+    // todo: move to setter
+    setDebugLevel: function(level) {
+        this._debugLevel = level;
     }
 });
 private(IRC.prototype, {
+    _debug: function(level, text, data) {
+        if (level <= this._debugLevel) {
+            console.log(text);
+        }
+    },
     _queueEventPreInterceptor: function(interceptor) {
         var interceptorQueues = [];
         private(interceptor, {
@@ -374,13 +383,16 @@ private(IRC.prototype, {
         },
     },
     _processServerMessage: function(line) {
+        this._debug(4, 'Incoming: ' + line);                
         var matches = line.match(/^:([^\s]*)\s([^\s]*)\s([^\s]*)\s:\u0001([^\s]*)\s(.*)\u0001/);
         if (matches) {
             var handler = this._messageHandlers['CTCP_' + matches[2] + '_' + matches[4]];
             if (typeof handler !== 'undefined') {
                 handler.call(this, matches[1], matches[3], matches[5]);
             }
-            else console.log('unhandled ctcp: ' + line);
+            else {
+                this._debug(2, 'Unhandled ctcp: ' + line);                
+            }
             return;
         }
         matches = line.match(/(?::([^\s]*)\s)?([^:]{1}[^\s]*)(?:\s([^:]{1}[^\s]*))?(?:\s(?:[@=]\s)?([^:]{1}[^\s]*))?(?:\s:?(.*))?/);
@@ -400,11 +412,13 @@ private(IRC.prototype, {
                 args.unshift(handler);
                 this._errorHandler.apply(this, args);
             }
-            else console.log('unhandled msg: ' + line);
+            else {
+                this._debug(2, 'Unhandled msg: ' + line);
+            }
             return;
         }
         // Unknown
-        console.log('unmatched server data: ' + line);
+        this._debug(2, 'Unhandled server data: ' + line);        
     }
 });
 exports.IRC = IRC;
