@@ -1,7 +1,7 @@
 require('../lib/array');
 var assert = require('assert'); 
 var fake = require('../lib/fake').fake;
-var IRC = require('../lib/IRC').IRC;
+var IRC = require('../IRC').IRC;
 
 module.exports = {
     'connect attempts to set proper encoding and establish socket connection': function() {
