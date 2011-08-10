@@ -295,7 +295,7 @@ private(IRC.prototype, {
         // Server messages
         /* RPL_WELCOME */ '001': function(from, to, text) {
             this._username = to;
-            this.emit('welcome', text);
+            this.emit('connected', text);
         },
         /* RPL_MOTDSTART */ '375': function() {
             return this._messageHandlers['372'].apply(this, arguments);
@@ -304,7 +304,7 @@ private(IRC.prototype, {
             this.emit('servertext', from, to, text);
         },
         /* RPL_ENDOFMOTD */ '376': function(from, text) {
-            this.emit('connected', from);
+            return this._messageHandlers['372'].apply(this, arguments);
         },
         /* RPL_NAMRPLY */ '353': function(from, to, where, names) {
             this._cache['names'] = this._cache['names'] || {};

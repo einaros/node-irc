@@ -32,7 +32,7 @@ module.exports = {
         var irc = new IRC(obj);
         irc.connect('this is not a valid nickname');
         var eventEmitted = false;
-        irc.on('welcome', function(message) {
+        irc.on('connected', function(message) {
             eventEmitted = true;
             assert.equal('Welcome to Some Internet Relay Chat Network this', message);
         });
@@ -200,7 +200,7 @@ module.exports = {
         data(':foo NOTICE bar :\u0001PING ' + when + '\u0001\r\n');
         assert.ok(eventEmitted);
     },
-    'incoming server text (375) message causes servertext event': function() {
+    'incoming RPL_MOTDSTART message causes servertext event': function() {
         var obj = fake(['on', 'setEncoding', 'connect', 'write']);
         var irc = new IRC(obj);
         var eventEmitted = false;
@@ -214,7 +214,7 @@ module.exports = {
         data(':irc.foo.bar 375 user :hi there\r\n');
         assert.ok(eventEmitted);
     },
-    'incoming server text (372) message causes servertext event': function() {
+    'incoming RPL_MOTD message causes servertext event': function() {
         var obj = fake(['on', 'setEncoding', 'connect', 'write']);
         var irc = new IRC(obj);
         var eventEmitted = false;
@@ -228,11 +228,11 @@ module.exports = {
         data(':irc.foo.bar 372 user :hi there\r\n');
         assert.ok(eventEmitted);
     },
-    'incoming end of motd message causes connected event': function() {
+    'incoming RPL_ENDOFMOTD message causes servertext event': function() {
         var obj = fake(['on', 'setEncoding', 'connect', 'write']);
         var irc = new IRC(obj);
         var eventEmitted = false;
-        irc.on('connected', function(from, to, text) {
+        irc.on('servertext', function(from, to, text) {
             eventEmitted = true;
         });
         data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
