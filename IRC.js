@@ -17,21 +17,22 @@ function IRC(server, port) {
     this._port = port;
     this._cache = {};
     var realEmit = this.emit;
-    this._interceptorMap = {};
+    this._eventInterceptorMap = {};
+    this._eventPostHandlerMap = {};
     this.emit = function(event) {
         if (event !== 'newListener') {
-            var interceptorArray = this._interceptorMap[event];
-            if (interceptorArray && interceptorArray.length > 0) {
-                for (var i = 0; i < interceptorArray.length; ++i) {
-                    if (interceptorArray[i][event].apply(this,
-                        Array.prototype.slice.call(arguments, 1)) === true) {
-                        interceptorArray[i].__remove();
+            var interceptorQueue = this._eventInterceptorMap[event];
+            if (interceptorQueue && interceptorQueue.length > 0) {
+                for (var i = 0; i < interceptorQueue.length; ++i) {
+                    if (interceptorQueue[i][event].apply(this, Array.prototype.slice.call(arguments, 1)) === true) {
+                        interceptorQueue[i].__remove();
                         break;
                     }
                 }
             }
         }
-        return realEmit.apply(this, arguments);
+        var retVal = realEmit.apply(this, arguments);
+        return retVal;
     }
     this._socket.setEncoding('ascii');
     this._socket.on('connect', function() {
@@ -76,7 +77,7 @@ public(IRC.prototype, {
     },
     join: function(channel, callback) {
         this._socket.write('JOIN ' + channel + '\r\n');
-        this._intercept({
+        this._queueEventInterceptor({
             'join': function(who, where) {
                 if (who == this._username && where == channel) {
                     if (typeof callback == 'function') callback();
@@ -100,7 +101,7 @@ public(IRC.prototype, {
     },
     kick: function(where, target, why, callback) {
         this._socket.write('KICK ' + where + ' ' + target + ' :' + why + '\r\n');
-        this._intercept({
+        this._queueEventInterceptor({
             'kick': function(who_, where_, target_, why_) {
                 if (who_ == this._username && where_ == where && target_ == target) {
                     if (typeof callback == 'function') callback();
@@ -126,7 +127,7 @@ public(IRC.prototype, {
         var maskString = typeof mask == 'string' ? mask : undefined;
         var cb = typeof mask == 'function' ? mask : callback;
         this._socket.write('MODE ' + target + ' ' + modes + (maskString ? ' ' + maskString : '') + '\r\n');
-        this._intercept({
+        this._queueEventInterceptor({
             'mode': function(who_, target_, modes_, mask_) {
                 if (who_ == this._username && 
                     target_ == target &&
@@ -153,7 +154,7 @@ public(IRC.prototype, {
     },
     names: function(channel, callback) {
         this._socket.write('NAMES ' + channel + '\r\n');
-        this._intercept({
+        this._queueEventInterceptor({
             'names': function(where, names) {
                 if (where == channel) {
                     if (typeof callback == 'function') callback(undefined, names);
@@ -164,7 +165,7 @@ public(IRC.prototype, {
     },
     nick: function(newnick, callback) {
         this._socket.write('NICK ' + newnick + '\r\n');
-        this._intercept({
+        this._queueEventInterceptor({
             'nick': function(oldn, newn) {
                 if (oldn == this._username) {
                     this._username = newnick;
@@ -186,7 +187,7 @@ public(IRC.prototype, {
     },
     part: function(channel, callback) {
         this._socket.write('PART ' + channel + '\r\n');
-        this._intercept({
+        this._queueEventInterceptor({
             'part': function(who_, where_) {
                 if (who_ == this._username && where_ == channel) {
                     if (typeof callback == 'function') callback(undefined);
@@ -218,25 +219,24 @@ public(IRC.prototype, {
     }
 });
 private(IRC.prototype, {
-    // stacks an interceptor for the given set of events
-    _intercept: function(interceptor) {
-        var interceptorStackArray = [];
+    _queueEventInterceptor: function(interceptor) {
+        var interceptorQueues = [];
         private(interceptor, {
             __remove: function() {
-                for (var i = 0; i < interceptorStackArray.length; ++i) {
-                    var interceptorStack = interceptorStackArray[i];
-                    var index = interceptorStack.indexOf(interceptor);
-                    if (index != -1) interceptorStack.splice(index, 1);
+                for (var i = 0; i < interceptorQueues.length; ++i) {
+                    var interceptorQueue = interceptorQueues[i];
+                    var index = interceptorQueue.indexOf(interceptor);
+                    if (index != -1) interceptorQueue.splice(index, 1);
                 }
             }
         });
         for (var event in interceptor) {
-            var interceptorStack = this._interceptorMap[event];
-            if (typeof interceptorStack == 'undefined') {
-                interceptorStack = this._interceptorMap[event] = [];
+            var interceptorQueue = this._eventInterceptorMap[event];
+            if (typeof interceptorQueue == 'undefined') {
+                interceptorQueue = this._eventInterceptorMap[event] = [];
             }
-            interceptorStack.push(interceptor);
-            interceptorStackArray.push(interceptorStack);
+            interceptorQueue.push(interceptor);
+            interceptorQueues.push(interceptorQueue);
         }
     },
     _errorHandler: function(code, server, to, regarding, reason) {
