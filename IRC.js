@@ -124,39 +124,6 @@ public(IRC.prototype, {
             }.bind(this)
         });
     },
-    names: function(channel, callback) {
-        this._socket.write('NAMES ' + channel + '\r\n');
-        this._intercept({
-            'names': function(where, names) {
-                if (where == channel) {
-                    if (typeof callback == 'function') callback(undefined, names);
-                    return true;
-                }
-            }.bind(this),
-        });
-    },
-    nick: function(newnick, callback) {
-        this._socket.write('NICK ' + newnick + '\r\n');
-        this._intercept({
-            'nick': function(oldn, newn) {
-                if (oldn == this._username && newn == newnick) {
-                    this._username = newnick;
-                    if (typeof callback == 'function') callback(undefined, oldn, newn);
-                    return true;
-                }
-            }.bind(this),
-            'errorcode': function(code, who, regarding, reason) {
-                if (['ERR_NONICKNAMEGIVEN'].has(code)) {
-                    if (typeof callback == 'function') callback(regarding);
-                    return true;
-                }
-                else if(['ERR_NICKNAMEINUSE', 'ERR_NICKCOLLISION', 'ERR_ERRONEUSNICKNAME'].has(code)) {
-                    if (typeof callback == 'function') callback(reason);
-                    return true;
-                }
-            }.bind(this)
-        });
-    },
     mode: function(target, modes, mask, callback) {
         var maskString = typeof mask == 'string' ? mask : undefined;
         var cb = typeof mask == 'function' ? mask : callback;
@@ -187,11 +154,67 @@ public(IRC.prototype, {
             }
         });
     },
-    privmsg: function(to, message) {
-        this._socket.write('PRIVMSG ' + to + ' :' + message + '\r\n');
+    names: function(channel, callback) {
+        this._socket.write('NAMES ' + channel + '\r\n');
+        this._intercept({
+            'names': function(where, names) {
+                if (where == channel) {
+                    if (typeof callback == 'function') callback(undefined, names);
+                    return true;
+                }
+            }.bind(this),
+        });
+    },
+    nick: function(newnick, callback) {
+        this._socket.write('NICK ' + newnick + '\r\n');
+        this._intercept({
+            'nick': function(oldn, newn) {
+                if (oldn == this._username) {
+                    this._username = newnick;
+                    if (typeof callback == 'function') callback(undefined, oldn, newn);
+                    return true;
+                }
+            }.bind(this),
+            'errorcode': function(code, who, regarding, reason) {
+                if (['ERR_NONICKNAMEGIVEN'].has(code)) {
+                    if (typeof callback == 'function') callback(regarding);
+                    return true;
+                }
+                else if(['ERR_NICKNAMEINUSE', 'ERR_NICKCOLLISION', 'ERR_ERRONEUSNICKNAME'].has(code)) {
+                    if (typeof callback == 'function') callback(reason);
+                    return true;
+                }
+            }.bind(this)
+        });
+    },
+    part: function(channel, callback) {
+        this._socket.write('PART ' + channel + '\r\n');
+        this._intercept({
+            'part': function(who_, where_) {
+                if (who_ == this._username && where_ == channel) {
+                    if (typeof callback == 'function') callback(undefined);
+                    return true;
+                }
+            }.bind(this),
+            'errorcode': function(code, who, regarding, reason) {
+                // todo: some of these probably get the wrong params
+                if (['ERR_NOSUCHCHANNEL', 'ERR_NOTONCHANNEL'].has(code)) {
+                    if (typeof cb == 'function') cb(reason);
+                    return true;
+                }
+                else if (code == 'ERR_NEEDMOREPARAMS' &&
+                         regarding == 'JOIN') {
+                    if (typeof cb == 'function') cb(reason);
+                    return true;
+                }
+            }.bind(this)
+        });        
     },
     ping: function(to) {
         this._socket.write('PRIVMSG ' + to + ' :\1PING ' + Date.now() + '\1\r\n');
+    },
+    privmsg: function(to, message) {
+        this._socket.write('PRIVMSG ' + to + ' :' + message + '\r\n');
     },
     quit: function(message) {
         this._socket.write('QUIT :' + message + '\r\n');
@@ -270,13 +293,17 @@ private(IRC.prototype, {
         '501': 'ERR_UMODEUNKNOWNFLAG',
         '502': 'ERR_USERSDONTMATCH',
         // Server messages
+        /* RPL_WELCOME */ '001': function(from, to, text) {
+            this._username = to;
+            this.emit('welcome', text);
+        },
         /* RPL_MOTDSTART */ '375': function() {
             return this._messageHandlers['372'].apply(this, arguments);
         },
         /* RPL_MOTD */ '372': function(from, to, text) {
             this.emit('servertext', from, to, text);
         },
-        /* RPL_ENDOFMOTD */ '376': function(from, data) {
+        /* RPL_ENDOFMOTD */ '376': function(from, text) {
             this.emit('connected', from);
         },
         /* RPL_NAMRPLY */ '353': function(from, to, where, names) {
@@ -346,11 +373,16 @@ private(IRC.prototype, {
         if (matches) {
             var handler = this._messageHandlers[matches[2]];
             var args = [];
-            for (var i = 1; i < matches.length; ++i) {
-                if (i != 2 && typeof matches[i] !== 'undefined') args.push(matches[i]);
+            if (typeof handler == 'function') {
+                for (var i = 1; i < matches.length; ++i) {
+                    if (i != 2 && typeof matches[i] !== 'undefined') args.push(matches[i]);
+                }
+                handler.apply(this, args);
             }
-            if (typeof handler == 'function') handler.apply(this, args);
             else if (typeof handler == 'string') {
+                for (var i = 1; i < matches.length; ++i) {
+                    if (i != 2) args.push(matches[i]);
+                }
                 args.unshift(handler);
                 this._errorHandler.apply(this, args);
             }
