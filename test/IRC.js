@@ -1,7 +1,7 @@
-require('../array');
+require('../lib/array');
 var assert = require('assert'); 
-var fake = require('../fake').fake;
-var IRC = require('../IRC').IRC;
+var fake = require('../lib/fake').fake;
+var IRC = require('../lib/IRC').IRC;
 
 module.exports = {
     'connect attempts to set proper encoding and establish socket connection': function() {
@@ -39,7 +39,7 @@ module.exports = {
         data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
         data(':irc.foo.bar 001 this :Welcome to Some Internet Relay Chat Network this\r\n');
         assert.ok(eventEmitted);        
-        assert.equal('this', irc.me());
+        assert.equal('this', irc.whoami());
     },
     'incoming privmsg causes privmsg event': function() {
         var obj = fake(['on', 'setEncoding', 'connect', 'write']);
@@ -357,7 +357,7 @@ module.exports = {
         data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
         data(':foo!bar@somewhere.com NICK :bar\r\n');
         assert.ok(eventEmitted);
-        assert.equal('bar', irc.me());
+        assert.equal('bar', irc.whoami());
     },
     'nick calls callback indicating error when nick change yields nick_in_use': function() {
         var obj = fake(['on', 'setEncoding', 'connect', 'write']);

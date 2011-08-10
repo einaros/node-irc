@@ -15,7 +15,7 @@ irc.on('connected', function(server) {
 });
 irc.on('join', function(who, where) {
    console.log(who + ' joined ' + where);
-   if (where == '#foobartest' && who != irc.me()) {
+   if (where == '#foobartest' && who != irc.whoami()) {
        irc.kick(where, who, 'woot', function(error) {
            if (error) {
                console.log('error kicking user: ' + error);

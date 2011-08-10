@@ -1,9 +1,9 @@
-require('./array');
+require('./lib/array');
 var net = require('net');
 var util = require('util');
 var events = require('events');
-var private = require('./proto').private;
-var public = require('./proto').public;
+var private = require('./lib/proto').private;
+var public = require('./lib/proto').public;
 
 function IRC(server, port) {
     events.EventEmitter.call(this);
@@ -71,7 +71,7 @@ function IRC(server, port) {
 }
 util.inherits(IRC, events.EventEmitter);
 public(IRC.prototype, {
-    me: function() {
+    whoami: function() {
         return this._username;
     },
     connect: function(username) {
