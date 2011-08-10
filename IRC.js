@@ -83,8 +83,7 @@ public(IRC.prototype, {
                     return true;
                 }
             }.bind(this),
-            'errorcode': function(code, who, where, error) {
-                // todo: some of these probably get the wrong params
+            'errorcode': function(code, to, regarding, reason) {
                 if (['ERR_BANNEDFROMCHAN', 'ERR_INVITEONLYCHAN', 'ERR_BADCHANNELKEY',
                      'ERR_CHANNELISFULL', 'ERR_BADCHANMASK', 'ERR_NOSUCHCHANNEL',
                      'ERR_TOOMANYCHANNELS'].has(code)) {
@@ -109,7 +108,6 @@ public(IRC.prototype, {
                 }
             }.bind(this),
             'errorcode': function(code, who_, where_, error) {
-                // todo: some of these probably get the wrong params
                 if (['ERR_NOSUCHCHANNEL', 'ERR_BADCHANMASK', 'ERR_CHANOPRIVSNEEDED',
                      'ERR_NOTONCHANNEL'].has(code) && 
                      where_ == where && who_ == this._username) {
@@ -138,8 +136,7 @@ public(IRC.prototype, {
                     return true;
                 }
             }.bind(this),
-            'errorcode': function(code, to, reason) {
-                // todo: some of these probably get the wrong params
+            'errorcode': function(code, to, regarding, reason) {
                 if (['ERR_CHANOPRIVSNEEDED', 'ERR_NOSUCHNICK', 'ERR_NOTONCHANNEL',
                      'ERR_KEYSET', 'ERR_UNKNOWNMODE', 'ERR_NOSUCHCHANNEL', 
                      'ERR_USERSDONTMATCH', 'ERR_UMODEUNKNOWNFLAG'].has(code)) {
@@ -197,7 +194,6 @@ public(IRC.prototype, {
                 }
             }.bind(this),
             'errorcode': function(code, who, regarding, reason) {
-                // todo: some of these probably get the wrong params
                 if (['ERR_NOSUCHCHANNEL', 'ERR_NOTONCHANNEL'].has(code)) {
                     if (typeof cb == 'function') cb(reason);
                     return true;
