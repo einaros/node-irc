@@ -8,20 +8,23 @@ var public = require('./proto').public;
 function IRC(server, port) {
     events.EventEmitter.call(this);
     if (typeof server == 'object') {
-        this._socket = server;
+        private(this, {_socket: server}, true);
     }
     else {
-        this._socket = new net.Socket();
+        private(this, {_socket: new net.Socket()}, true);
     }
-    this._server = server;
-    this._port = port;
-    this._cache = {};
+    private(this, {
+       _server: server,
+       _port: port,
+       _username: '',
+       _cache: {},
+       _callQueue: {},
+       _eventPreInterceptorMap: {},
+    }, true);
     var realEmit = this.emit;
-    this._eventInterceptorMap = {};
-    this._eventPostHandlerMap = {};
     this.emit = function(event) {
         if (event !== 'newListener') {
-            var interceptorQueue = this._eventInterceptorMap[event];
+            var interceptorQueue = this._eventPreInterceptorMap[event];
             if (interceptorQueue && interceptorQueue.length > 0) {
                 for (var i = 0; i < interceptorQueue.length; ++i) {
                     if (interceptorQueue[i][event].apply(this, Array.prototype.slice.call(arguments, 1)) === true) {
@@ -77,7 +80,7 @@ public(IRC.prototype, {
     },
     join: function(channel, callback) {
         this._socket.write('JOIN ' + channel + '\r\n');
-        this._queueEventInterceptor({
+        this._queueEventPreInterceptor({
             'join': function(who, where) {
                 if (who == this._username && where == channel) {
                     if (typeof callback == 'function') callback();
@@ -101,7 +104,7 @@ public(IRC.prototype, {
     },
     kick: function(where, target, why, callback) {
         this._socket.write('KICK ' + where + ' ' + target + ' :' + why + '\r\n');
-        this._queueEventInterceptor({
+        this._queueEventPreInterceptor({
             'kick': function(who_, where_, target_, why_) {
                 if (who_ == this._username && where_ == where && target_ == target) {
                     if (typeof callback == 'function') callback();
@@ -127,7 +130,7 @@ public(IRC.prototype, {
         var maskString = typeof mask == 'string' ? mask : undefined;
         var cb = typeof mask == 'function' ? mask : callback;
         this._socket.write('MODE ' + target + ' ' + modes + (maskString ? ' ' + maskString : '') + '\r\n');
-        this._queueEventInterceptor({
+        this._queueEventPreInterceptor({
             'mode': function(who_, target_, modes_, mask_) {
                 if (who_ == this._username && 
                     target_ == target &&
@@ -153,19 +156,32 @@ public(IRC.prototype, {
         });
     },
     names: function(channel, callback) {
-        this._socket.write('NAMES ' + channel + '\r\n');
-        this._queueEventInterceptor({
-            'names': function(where, names) {
-                if (where == channel) {
-                    if (typeof callback == 'function') callback(undefined, names);
-                    return true;
-                }
-            }.bind(this),
-        });
+        var handler = function() {
+            this._socket.write('NAMES ' + channel + '\r\n');
+            this._queueEventPreInterceptor({
+                'names': function(where, names) {
+                    this._callQueue.names.inProgress -= 1;;
+                    var handled = false;
+                    if (where == channel) {
+                        if (typeof callback == 'function') callback(undefined, names);
+                        handled = true;
+                    }
+                    if (this._callQueue.names.pending.length > 0) {
+                        this._callQueue.names.pending.shift()();
+                    }
+                    return handled;
+                }.bind(this)
+            });
+        }.bind(this);
+        var queue = this._callQueue.names = this._callQueue.names|| { inProgress: 0, pending: [] };
+        queue.inProgress += 1;
+        if (queue.inProgress > 1) {
+            queue.pending.push(handler);
+        } else handler();
     },
     nick: function(newnick, callback) {
         this._socket.write('NICK ' + newnick + '\r\n');
-        this._queueEventInterceptor({
+        this._queueEventPreInterceptor({
             'nick': function(oldn, newn) {
                 if (oldn == this._username) {
                     this._username = newnick;
@@ -187,7 +203,7 @@ public(IRC.prototype, {
     },
     part: function(channel, callback) {
         this._socket.write('PART ' + channel + '\r\n');
-        this._queueEventInterceptor({
+        this._queueEventPreInterceptor({
             'part': function(who_, where_) {
                 if (who_ == this._username && where_ == channel) {
                     if (typeof callback == 'function') callback(undefined);
@@ -219,7 +235,7 @@ public(IRC.prototype, {
     }
 });
 private(IRC.prototype, {
-    _queueEventInterceptor: function(interceptor) {
+    _queueEventPreInterceptor: function(interceptor) {
         var interceptorQueues = [];
         private(interceptor, {
             __remove: function() {
@@ -231,9 +247,9 @@ private(IRC.prototype, {
             }
         });
         for (var event in interceptor) {
-            var interceptorQueue = this._eventInterceptorMap[event];
+            var interceptorQueue = this._eventPreInterceptorMap[event];
             if (typeof interceptorQueue == 'undefined') {
-                interceptorQueue = this._eventInterceptorMap[event] = [];
+                interceptorQueue = this._eventPreInterceptorMap[event] = [];
             }
             interceptorQueue.push(interceptor);
             interceptorQueues.push(interceptorQueue);
@@ -307,8 +323,10 @@ private(IRC.prototype, {
             this._cache['names'][where] = (this._cache['names'][where] || []).concat(names.split(' '));
         },
         /* RPL_ENDOFNAMES */ '366': function(from, to, where) {
-            this.emit('names', where, this._cache['names'][where]);
-            delete this._cache['names'][where];
+            var namesCache = this._cache['names']||[];
+            var names = namesCache[where]||[];
+            this.emit('names', where, names);
+            if (this._cache['names'] && this._cache['names'][where]) delete this._cache['names'][where];
         },
         'PING': function(from) {
             this._socket.write('PONG :' + from + '\r\n');

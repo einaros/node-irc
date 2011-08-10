@@ -400,6 +400,17 @@ module.exports = {
         irc.names('#test');
         assert.ok(obj.write.history.last()[0].match(/^NAMES #test\r\n/));
     },
+    'names queue names command until previous call completes': function() {
+        var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+        var irc = new IRC(obj);
+        irc.names('#test');
+        irc.names('#test');
+        assert.equal(1, obj.write.history.length);
+        data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
+        data(':irc.homelien.no 366 muppetty #foobartest :End of /NAMES list.\r\n');
+        assert.equal(2, obj.write.history.length);
+        assert.ok(obj.write.history.last()[0].match(/^NAMES #test\r\n/));
+    },
     'names calls callback when name listing is done': function() {
         var obj = fake(['on', 'setEncoding', 'connect', 'write']);
         var irc = new IRC(obj);
