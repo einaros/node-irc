@@ -337,6 +337,12 @@ private(IRC.prototype, {
             this.emit('names', where, names);
             if (this._cache['names'] && this._cache['names'][where]) delete this._cache['names'][where];
         },
+        /* RPL_NOTOPIC */ '331': function(from, where, topic) {
+            this.emit('topic', where, null);
+        },
+        /* RPL_TOPIC */ '332': function(from, where, topic) {
+            this.emit('topic', where, topic);
+        },
         'PING': function(from) {
             this._socket.write('PONG :' + from + '\r\n');
         },

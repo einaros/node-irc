@@ -137,6 +137,32 @@ module.exports = {
         data(':foo!bar@somewhere.com MODE #test +b bar!*@*\r\n');
         assert.ok(eventEmitted);
     },
+    'incoming RPL_TOPIC causes topic event': function() {
+        var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+        var irc = new IRC(obj);
+        var eventEmitted = false;
+        irc.on('topic', function(where, topic) {
+            eventEmitted = true;
+            assert.equal('#foo', where);
+            assert.equal('foo bar baz', topic);
+        });
+        data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
+        data(':foo!bar@somewhere.com 332 #foo :foo bar baz\r\n');
+        assert.ok(eventEmitted);
+    },
+    'incoming RPL_NOTOPIC causes topic event': function() {
+        var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+        var irc = new IRC(obj);
+        var eventEmitted = false;
+        irc.on('topic', function(where, topic) {
+            eventEmitted = true;
+            assert.equal('#foo', where);
+            assert.equal(null, topic);
+        });
+        data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
+        data(':foo!bar@somewhere.com 331 #foo :No topic is set\r\n');
+        assert.ok(eventEmitted);
+    },
     'incoming user mode causes mode event': function() {
         var obj = fake(['on', 'setEncoding', 'connect', 'write']);
         var irc = new IRC(obj);
