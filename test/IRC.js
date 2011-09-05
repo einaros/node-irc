@@ -147,7 +147,7 @@ module.exports = {
             assert.equal('foo bar baz', topic);
         });
         data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
-        data(':foo!bar@somewhere.com 332 #foo :foo bar baz\r\n');
+        data(':foo!bar@somewhere.com 332 muppety #foo :foo bar baz\r\n');
         assert.ok(eventEmitted);
     },
     'incoming RPL_NOTOPIC causes topic event': function() {
@@ -160,7 +160,21 @@ module.exports = {
             assert.equal(null, topic);
         });
         data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
-        data(':foo!bar@somewhere.com 331 #foo :No topic is set\r\n');
+        data(':foo!bar@somewhere.com 331 muppety #foo :No topic is set\r\n');
+        assert.ok(eventEmitted);
+    },
+    'incoming RPL_TOPICWHOTIME causes topicage event': function() {
+        var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+        var irc = new IRC(obj);
+        var eventEmitted = false;
+        irc.on('topicinfo', function(where, who, timestamp) {
+            eventEmitted = true;
+            assert.equal('#foo', where);
+            assert.equal('foo', who);
+            assert.equal('1306328246', timestamp);
+        });
+        data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
+        data(':foo!bar@somewhere.com 333 muppety #foo foo!bar@muppet.com 1306328246\r\n');
         assert.ok(eventEmitted);
     },
     'incoming user mode causes mode event': function() {
@@ -287,7 +301,7 @@ module.exports = {
         var irc = new IRC(obj);
         irc._username = 'foo';
         var eventEmitted = false;
-        irc.on('errorcode', function(code, to, regarding, reason) {
+        irc.on('errorcode', function(code, to, reason) {
             eventEmitted = true;
             assert.equal('ERR_NONICKNAMEGIVEN', code);
             assert.equal('foo', to);
@@ -327,6 +341,22 @@ module.exports = {
         });
         data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
         data(':foo!bar@somewhere.com JOIN :#testorama\r\n');
+        assert.ok(eventEmitted);
+        assert.equal(0, irc.listeners('join').length);
+    },
+    'join calls callback when joins is redirected, and that join is done': function() {
+        var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+        var irc = new IRC(obj);
+        irc._username = 'foo';
+        var eventEmitted = false;
+        irc.join('#testorama', function(error, redirectedTo) {
+            eventEmitted = true;
+            assert.ok(!error);
+            assert.equal('##testorama', redirectedTo);
+        });
+        data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
+        data(':niven.freenode.net 470 foo #testorama ##testorama :Forwarding to another channel\r\n');
+        data(':foo!bar@somewhere.com JOIN :##testorama\r\n');
         assert.ok(eventEmitted);
         assert.equal(0, irc.listeners('join').length);
     },

@@ -87,6 +87,12 @@ public(IRC.prototype, {
                     return true;
                 }
             }.bind(this),
+            'redirected': function(who, where, redirect) {
+                if (who == this._username && where == channel) {
+                    if (typeof callback == 'function') callback(null, redirect);
+                    return true;
+                }
+            }.bind(this),
             'errorcode': function(code, to, regarding, reason) {
                 if (['ERR_BANNEDFROMCHAN', 'ERR_INVITEONLYCHAN', 'ERR_BADCHANNELKEY',
                      'ERR_CHANNELISFULL', 'ERR_BADCHANMASK', 'ERR_NOSUCHCHANNEL',
@@ -337,11 +343,18 @@ private(IRC.prototype, {
             this.emit('names', where, names);
             if (this._cache['names'] && this._cache['names'][where]) delete this._cache['names'][where];
         },
-        /* RPL_NOTOPIC */ '331': function(from, where, topic) {
+        /* RPL_NOTOPIC */ '331': function(from, to, where, topic) {
             this.emit('topic', where, null);
         },
-        /* RPL_TOPIC */ '332': function(from, where, topic) {
+        /* RPL_TOPIC */ '332': function(from, to, where, topic) {
             this.emit('topic', where, topic);
+        },
+        /* RPL_LINKCHANNEL */ '470': function(from, to, original, redirect) {
+            this.emit('redirected', to, original, redirect);
+        },
+        /* RPL_TOPICWHOTIME */ '333': function(from, to, where, who, timestamp) {
+            var identity = parseIdentity(who);
+            this.emit('topicinfo', where, identity.nick, timestamp);
         },
         'PING': function(from) {
             this._socket.write('PONG :' + from + '\r\n');
@@ -401,19 +414,19 @@ private(IRC.prototype, {
             }
             return;
         }
-        matches = line.match(/(?::([^\s]*)\s)?([^:]{1}[^\s]*)(?:\s([^:]{1}[^\s]*))?(?:\s(?:[@=*]\s)?([^:]{1}[^\s]*))?(?:\s:?(.*))?/);
+        matches = line.match(/(?::([^\s]*)\s)?([^:]{1}[^\s]*)(?:\s([^:=*@]{1}[^\s]*))?(?:\s([^:=*@]{1}[^\s]*))?(?:\s(?:[@=*]\s)?([^:]{1}[^\s]*))?(?:\s:?(.*))?/);
         if (matches) {
             var handler = this._messageHandlers[matches[2]];
             var args = [];
             if (typeof handler == 'function') {
                 for (var i = 1; i < matches.length; ++i) {
-                    if (i != 2 && typeof matches[i] !== 'undefined') args.push(matches[i]);
+                    if (i != 2 && typeof matches[i] != 'undefined') args.push(matches[i]);
                 }
                 handler.apply(this, args);
             }
             else if (typeof handler == 'string') {
                 for (var i = 1; i < matches.length; ++i) {
-                    if (i != 2) args.push(matches[i]);
+                    if (i != 2 && typeof matches[i] != 'undefined') args.push(matches[i]);
                 }
                 args.unshift(handler);
                 this._errorHandler.apply(this, args);
