@@ -97,12 +97,12 @@ public(IRC.prototype, {
                 if (['ERR_BANNEDFROMCHAN', 'ERR_INVITEONLYCHAN', 'ERR_BADCHANNELKEY',
                      'ERR_CHANNELISFULL', 'ERR_BADCHANMASK', 'ERR_NOSUCHCHANNEL',
                      'ERR_TOOMANYCHANNELS'].has(code)) {
-                    if (typeof callback == 'function') callback(error);
+                    if (typeof callback == 'function') callback(reason);
                     return true;
                 }
                 else if (code == 'ERR_NEEDMOREPARAMS' &&
                          regarding == 'JOIN') {
-                    if (typeof callback == 'function') callback(error);
+                    if (typeof callback == 'function') callback(reason);
                     return true;
                 }
             }
@@ -117,16 +117,16 @@ public(IRC.prototype, {
                     return true;
                 }
             }.bind(this),
-            'errorcode': function(code, who_, where_, error) {
+            'errorcode': function(code, who_, where_, reason) {
                 if (['ERR_NOSUCHCHANNEL', 'ERR_BADCHANMASK', 'ERR_CHANOPRIVSNEEDED',
                      'ERR_NOTONCHANNEL'].has(code) && 
                      where_ == where && who_ == this._username) {
-                    if (typeof callback == 'function') callback(error);
+                    if (typeof callback == 'function') callback(reason);
                     return true;
                 }
                 else if (code == 'ERR_NEEDMOREPARAMS' &&
                          where_ == 'KICK') {
-                    if (typeof callback == 'function') callback(error);
+                    if (typeof callback == 'function') callback(reason);
                     return true;
                 }
             }.bind(this)

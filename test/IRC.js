@@ -360,6 +360,20 @@ module.exports = {
         assert.ok(eventEmitted);
         assert.equal(0, irc.listeners('join').length);
     },
+    'join calls callback when join is blocked due to ban': function() {
+        var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+        var irc = new IRC(obj);
+        irc._username = 'foo';
+        var eventEmitted = false;
+        irc.join('#testorama', function(error) {
+            eventEmitted = true;
+            assert.ok(error);
+        });
+        data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
+        data(':foo!bar@somewhere.com 474 foo #testorama :banned\r\n');
+        assert.ok(eventEmitted);
+        assert.equal(0, irc.listeners('join').length);
+    },
     'kick sends kick command to server': function() {
         var obj = fake(['on', 'setEncoding', 'connect', 'write']);
         var irc = new IRC(obj);
