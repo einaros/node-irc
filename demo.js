@@ -7,28 +7,31 @@ irc.on('connected', function(server) {
             console.log('error joining channel: ' + error);
             return;
         }
-        irc.privmsg('#foobartest', 'well hello yall');
-        irc.nick('muppetty2', function(old, newn) {
-            irc.privmsg('#foobartest', 'I\'m new!');
-        });
+        // irc.privmsg('#foobartest', 'well hello yall');
+        // irc.nick('muppetty2', function(old, newn) {
+        //     irc.privmsg('#foobartest', 'I\'m new!');
+        // });
     });
 });
+irc.on('topic', function(where, topic) {
+    console.log('topic of ' + where + ': ' + topic);
+});
 irc.on('join', function(who, where) {
-   console.log(who + ' joined ' + where);
-   if (where == '#foobartest' && who != irc.whoami()) {
-       irc.kick(where, who, 'woot', function(error) {
-           if (error) {
-               console.log('error kicking user: ' + error);
-               return;
-           }
-           irc.mode(where, '+b', who + '!*@*', function(error) {
-               if (error) {
-                   console.log('error banning user: ' + error);
-                   return;
-               }               
-           });
-       });
-   } 
+    console.log(who + ' joined ' + where);
+    if (where == '#foobartest' && who != irc.whoami()) {
+        irc.kick(where, who, 'woot', function(error) {
+            if (error) {
+                console.log('error kicking user: ' + error);
+                return;
+            }
+            irc.mode(where, '+b', who + '!*@*', function(error) {
+                if (error) {
+                    console.log('error banning user: ' + error);
+                    return;
+                }               
+            });
+        });
+    } 
 });
 irc.on('quit', function(who, message) {
     console.log(who + ' quit: ' + message);
@@ -44,7 +47,7 @@ irc.on('names', function(channel, names) {
 });
 irc.on('privmsg', function(from, to, message) {
     console.log('<' + from + '> to ' + to + ': ' + message);
-    if (to[0] == '#') irc.privmsg(to, 'public greetings, ' + from);
+    if (to[0] == '#') irc.privmsg(to, 'hi ' + from);
     else irc.privmsg(from, 'hi!');
 });
 irc.on('mode', function(who, target, modes, mask) {
