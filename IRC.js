@@ -20,7 +20,8 @@ function IRC(server, port) {
        _cache: {},
        _callQueue: {},
        _eventPreInterceptorMap: {},
-       _debugLevel: 2
+       _debugLevel: 2,
+       _connected: false
     }, true);
     var realEmit = this.emit;
     this.emit = function(event) {
@@ -45,6 +46,8 @@ function IRC(server, port) {
     }.bind(this));
     this._socket.on('close', function(had_error) {
         this._debug(3, 'Server socket closed');
+        this._connected = false;
+        this.emit('disconnected');
     }.bind(this));
     this._socket.on('end', function() {
         this._debug(3, 'Server socket end');
@@ -327,6 +330,8 @@ private(IRC.prototype, {
         // Server messages
         /* RPL_WELCOME */ '001': function(from, to, text) {
             this._username = to;
+            if (this._connected) return;
+            this._connected = true;
             this.emit('connected', text);
         },
         /* RPL_MOTDSTART */ '375': function() {

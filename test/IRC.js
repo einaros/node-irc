@@ -41,6 +41,54 @@ describe('IRC', function() {
     assert.ok(eventEmitted);
     assert.equal('this', irc.whoami());
   });
+  it('repeated incoming RPL_WELCOME does not cause connected event', function() {
+    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var irc = new IRC(obj);
+    irc.connect('this is not a valid nickname');
+    var eventEmitted = 0;
+    irc.on('connected', function(message) {
+      ++eventEmitted;
+      assert.equal('Welcome to Some Internet Relay Chat Network this', message);
+    });
+    var data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
+    data(':irc.foo.bar 001 this :Welcome to Some Internet Relay Chat Network this\r\n');
+    data(':irc.foo.bar 001 this :Welcome to Some Internet Relay Chat Network this\r\n');
+    assert.equal(1, eventEmitted);
+  });
+  it('connection close causes close event', function() {
+    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var irc = new IRC(obj);
+    irc.connect('this is not a valid nickname');
+    var eventEmitted = false;
+    irc.on('connected', function(message) {
+      close();
+    });
+    irc.on('disconnected', function(message) {
+      eventEmitted = true;
+    });
+    var data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
+    var close = obj.on.history.filter(function(args) { return args[0] == 'close'; }).map(function(args) { return args[1]; })[0];
+    data(':irc.foo.bar 001 this :Welcome to Some Internet Relay Chat Network this\r\n');
+    assert.ok(eventEmitted);
+  });
+  it('incoming RPL_WELCOME after disconnect causes connected event and nick sync', function() {
+    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var irc = new IRC(obj);
+    irc.connect('this is not a valid nickname');
+    var eventEmitted = false;
+    var connects = 0;
+    irc.on('connected', function(message) {
+      if (++connects == 1) close();
+      else if (connects == 2) eventEmitted = true;
+    });
+    irc.on('disconnected', function(message) {
+      data(':irc.foo.bar 001 this :Welcome to Some Internet Relay Chat Network this\r\n');
+    });
+    var data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
+    var close = obj.on.history.filter(function(args) { return args[0] == 'close'; }).map(function(args) { return args[1]; })[0];
+    data(':irc.foo.bar 001 this :Welcome to Some Internet Relay Chat Network this\r\n');
+    assert.ok(eventEmitted);
+  });
   it('incoming privmsg causes privmsg event', function() {
     var obj = fake(['on', 'setEncoding', 'connect', 'write']);
     var irc = new IRC(obj);
