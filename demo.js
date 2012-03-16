@@ -1,5 +1,5 @@
 var IRC = require('./IRC').IRC;
-var irc = new IRC('irc.homelien.no', 6667);
+var irc = new IRC('irc.freenode.net', 6667);
 irc.on('connected', function(server) {
     console.log('connected to ' + server);
     irc.join('#foobartest', function(error) {
@@ -28,10 +28,10 @@ irc.on('join', function(who, where) {
                 if (error) {
                     console.log('error banning user: ' + error);
                     return;
-                }               
+                }
             });
         });
-    } 
+    }
 });
 irc.on('quit', function(who, message) {
     console.log(who + ' quit: ' + message);
@@ -63,7 +63,7 @@ irc.on('ping', function(from) {
 irc.on('ping-reply', function(from, ms) {
     console.log('ping reply from ' + from + ': ' + ms + ' ms');
 });
-irc.connect('muppetty');
+irc.connect('muppetty', 'my name yeah', 'ident');
 process.on('exit', function () {
     irc.quit('bye');
 });

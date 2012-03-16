@@ -41,7 +41,7 @@ function IRC(server, port) {
     this._socket.setEncoding('ascii');
     this._socket.on('connect', function() {
         this._socket.write('NICK ' + this._username + '\r\n');
-        this._socket.write('USER ' + this._username + ' client homelien :Foo Bar\r\n');
+        this._socket.write('USER ' + this._ident + ' host server :' + this._realname + '\r\n');
     }.bind(this));
     this._socket.on('close', function(had_error) {
         this._debug(3, 'Server socket closed');
@@ -74,8 +74,10 @@ public(IRC.prototype, {
     whoami: function() {
         return this._username;
     },
-    connect: function(username) {
+    connect: function(username, realname, ident) {
         this._username = username;
+        this._realname = realname || 'user';
+        this._ident = ident || 'user';
         this._socket.connect(this._port, this._server);
     },
     join: function(channel, callback) {
@@ -119,7 +121,7 @@ public(IRC.prototype, {
             }.bind(this),
             'errorcode': function(code, who_, where_, reason) {
                 if (['ERR_NOSUCHCHANNEL', 'ERR_BADCHANMASK', 'ERR_CHANOPRIVSNEEDED',
-                     'ERR_NOTONCHANNEL'].has(code) && 
+                     'ERR_NOTONCHANNEL'].has(code) &&
                      where_ == where && who_ == this._username) {
                     if (typeof callback == 'function') callback(reason);
                     return true;
@@ -138,7 +140,7 @@ public(IRC.prototype, {
         this._socket.write('MODE ' + target + ' ' + modes + (maskString ? ' ' + maskString : '') + '\r\n');
         this._queueEventPreInterceptor({
             'mode': function(who_, target_, modes_, mask_) {
-                if (who_ == this._username && 
+                if (who_ == this._username &&
                     target_ == target &&
                     modes_ == modes &&
                     mask_ == maskString) {
@@ -148,7 +150,7 @@ public(IRC.prototype, {
             }.bind(this),
             'errorcode': function(code, to, regarding, reason) {
                 if (['ERR_CHANOPRIVSNEEDED', 'ERR_NOSUCHNICK', 'ERR_NOTONCHANNEL',
-                     'ERR_KEYSET', 'ERR_UNKNOWNMODE', 'ERR_NOSUCHCHANNEL', 
+                     'ERR_KEYSET', 'ERR_UNKNOWNMODE', 'ERR_NOSUCHCHANNEL',
                      'ERR_USERSDONTMATCH', 'ERR_UMODEUNKNOWNFLAG'].has(code)) {
                     if (typeof cb == 'function') cb(reason);
                     return true;
@@ -227,13 +229,16 @@ public(IRC.prototype, {
                     return true;
                 }
             }.bind(this)
-        });        
+        });
     },
     ping: function(to) {
         this._socket.write('PRIVMSG ' + to + ' :\1PING ' + Date.now() + '\1\r\n');
     },
     privmsg: function(to, message) {
         this._socket.write('PRIVMSG ' + to + ' :' + message + '\r\n');
+    },
+    raw: function(message) {
+        this._socket.write(message + '\r\n');
     },
     quit: function(message) {
         this._socket.write('QUIT :' + message + '\r\n');
@@ -402,7 +407,7 @@ private(IRC.prototype, {
         },
     },
     _processServerMessage: function(line) {
-        this._debug(4, 'Incoming: ' + line);                
+        this._debug(4, 'Incoming: ' + line);
         var matches = line.match(/^:([^\s]*)\s([^\s]*)\s([^\s]*)\s:\u0001([^\s]*)\s(.*)\u0001/);
         if (matches) {
             var handler = this._messageHandlers['CTCP_' + matches[2] + '_' + matches[4]];
@@ -410,7 +415,7 @@ private(IRC.prototype, {
                 handler.call(this, matches[1], matches[3], matches[5]);
             }
             else {
-                this._debug(2, 'Unhandled ctcp: ' + line);                
+                this._debug(2, 'Unhandled ctcp: ' + line);
             }
             return;
         }
@@ -437,7 +442,7 @@ private(IRC.prototype, {
             return;
         }
         // Unknown
-        this._debug(2, 'Unhandled server data: ' + line);        
+        this._debug(2, 'Unhandled server data: ' + line);
     }
 });
 exports.IRC = IRC;

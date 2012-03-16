@@ -324,6 +324,12 @@ describe('IRC', function() {
     irc.privmsg('foo', 'hi there!');
     assert.ok(obj.write.history.last()[0].match(/^PRIVMSG foo :hi there!\r\n/));
   });
+  it('raw sends raw command to server', function() {
+    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var irc = new IRC(obj);
+    irc.raw('privmsg foo :bar!');
+    assert.ok(obj.write.history.last()[0].match(/^privmsg foo :bar!\r\n/));
+  });
   it('join sends join command to server', function() {
     var obj = fake(['on', 'setEncoding', 'connect', 'write']);
     var irc = new IRC(obj);
