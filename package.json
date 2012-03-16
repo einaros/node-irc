@@ -1,10 +1,10 @@
-{ 
+{
     "name": "node-irc",
     "version": "0.0.1",
     "description": "IRC client library",
     "author": "Einar Otto Stangvik <einaros@gmail.com>",
     "repository": "git://github.com/einaros/node-irc.git",
     "devDependencies": {
-        "expresso": "0.7.7"
+        "mocha": "latest"
     }
 }
