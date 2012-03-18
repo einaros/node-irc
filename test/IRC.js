@@ -131,6 +131,20 @@ describe('IRC', function() {
     data(':foo NOTICE bar :hi there!\r\n');
     assert.ok(eventEmitted);
   });
+  it('incoming topic causes topic event', function() {
+    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var irc = new IRC(obj);
+    var eventEmitted = false;
+    irc.on('topic', function(where, topic, who) {
+      eventEmitted = true;
+      assert.equal('#channel', where);
+      assert.equal('bars are great', topic);
+      assert.equal('foo', who);
+    });
+    var data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
+    data(':foo!ident@host.com TOPIC #channel :bars are great\r\n');
+    assert.ok(eventEmitted);
+  });
   it('incoming join causes join event', function() {
     var obj = fake(['on', 'setEncoding', 'connect', 'write']);
     var irc = new IRC(obj);

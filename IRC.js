@@ -374,6 +374,10 @@ private(IRC.prototype, {
             var identity = parseIdentity(who);
             this.emit('mode', identity.nick, target, modes, mask);
         },
+        'TOPIC': function(who, channel, topic) {
+            var identity = parseIdentity(who);
+            this.emit('topic', channel, topic, identity.nick);
+        },
         'PRIVMSG': function(from, to, message) {
             var identity = parseIdentity(from);
             this.emit('privmsg', identity.nick, to, message);
