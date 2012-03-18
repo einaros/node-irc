@@ -116,6 +116,21 @@ describe('IRC', function() {
     data(':foo!bar@somewhere.com JOIN :#channel\r\n');
     assert.ok(eventEmitted);
   });
+  it('incoming join causes join event when the user is "self", which would be the case for psybnc', function() {
+    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var irc = new IRC(obj);
+    irc._username = 'foo';
+    var eventEmitted = false;
+    irc.on('join', function(who, where) {
+      eventEmitted = true;
+      assert.equal('foo', who);
+      assert.equal('foo', irc.whoami());
+      assert.equal('#channel', where);
+    });
+    var data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
+    data(':foo!bar@somewhere.com JOIN :#channel\r\n');
+    assert.ok(eventEmitted);
+  });
   it('incoming nick causes nick event', function() {
     var obj = fake(['on', 'setEncoding', 'connect', 'write']);
     var irc = new IRC(obj);
