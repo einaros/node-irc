@@ -1,5 +1,6 @@
 var IRC = require('./IRC').IRC;
 var irc = new IRC('irc.freenode.net', 6667);
+irc.setDebugLevel(4);
 irc.on('connected', function(server) {
     console.log('connected to ' + server);
     irc.join('#foobartest', function(error) {

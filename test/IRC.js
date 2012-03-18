@@ -103,6 +103,34 @@ describe('IRC', function() {
     data(':foo PRIVMSG bar :hi there!\r\n');
     assert.ok(eventEmitted);
   });
+  it('incoming connection notice causes notice event', function() {
+    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var irc = new IRC(obj);
+    var eventEmitted = false;
+    irc.on('notice', function(from, to, message) {
+      eventEmitted = true;
+      assert.equal('foo', from);
+      assert.equal('*', to);
+      assert.equal('hi there!', message);
+    });
+    var data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
+    data(':foo NOTICE * :hi there!\r\n');
+    assert.ok(eventEmitted);
+  });
+  it('incoming notice causes notice event', function() {
+    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var irc = new IRC(obj);
+    var eventEmitted = false;
+    irc.on('notice', function(from, to, message) {
+      eventEmitted = true;
+      assert.equal('foo', from);
+      assert.equal('bar', to);
+      assert.equal('hi there!', message);
+    });
+    var data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
+    data(':foo NOTICE bar :hi there!\r\n');
+    assert.ok(eventEmitted);
+  });
   it('incoming join causes join event', function() {
     var obj = fake(['on', 'setEncoding', 'connect', 'write']);
     var irc = new IRC(obj);
