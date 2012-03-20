@@ -193,6 +193,9 @@ public(IRC.prototype, {
     nick: function(newnick, callback) {
         this._socket.write('NICK ' + newnick + '\r\n');
         this._queueEventPreInterceptor({
+            'connected': function() {
+                return true;
+            },
             'nick': function(oldn, newn) {
                 if (oldn == this._username) {
                     this._username = newnick;

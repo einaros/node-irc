@@ -64,7 +64,12 @@ irc.on('ping', function(from) {
 irc.on('ping-reply', function(from, ms) {
     console.log('ping reply from ' + from + ': ' + ms + ' ms');
 });
-irc.connect('muppetty', 'my name yeah', 'ident');
+irc.on('errorcode', function(code) {
+    if (code == 'ERR_NICKNAMEINUSE') {
+        irc.nick('einaros');
+    }
+});
+irc.connect('einaros', 'my name yeah', 'ident');
 process.on('exit', function () {
     irc.quit('bye');
 });
