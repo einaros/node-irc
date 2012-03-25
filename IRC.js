@@ -281,7 +281,7 @@ private(IRC.prototype, {
             interceptorQueues.push(interceptorQueue);
         }
     },
-    _errorHandler: function(code, server, to, regarding, reason) {
+    _errorHandler: function(code, raw, server, to, regarding, reason) {
         this.emit('errorcode', code, to, regarding, reason);
     },
     _messageHandlers: {
@@ -331,93 +331,93 @@ private(IRC.prototype, {
         '501': 'ERR_UMODEUNKNOWNFLAG',
         '502': 'ERR_USERSDONTMATCH',
         // Server messages
-        /* RPL_WELCOME */ '001': function(from, to, text) {
+        /* RPL_WELCOME */ '001': function(raw, from, to, text) {
             this._username = to;
             if (this._connected) return;
             this._connected = true;
             this.emit('connected', text);
         },
-        /* RPL_MOTDSTART */ '375': function() {
+        /* RPL_MOTDSTART */ '375': function(raw) {
             return this._messageHandlers['372'].apply(this, arguments);
         },
-        /* RPL_MOTD */ '372': function(from, to, text) {
-            this.emit('servertext', from, to, text);
+        /* RPL_MOTD */ '372': function(raw, from, to, text) {
+            this.emit('servertext', from, to, text, raw);
         },
-        /* RPL_ENDOFMOTD */ '376': function(from, text) {
+        /* RPL_ENDOFMOTD */ '376': function(raw, from, text) {
             return this._messageHandlers['372'].apply(this, arguments);
         },
-        /* RPL_NAMRPLY */ '353': function(from, to, where, names) {
+        /* RPL_NAMRPLY */ '353': function(raw, from, to, where, names) {
             this._cache['names'] = this._cache['names'] || {};
             this._cache['names'][where] = (this._cache['names'][where] || []).concat(names.split(' '));
         },
-        /* RPL_ENDOFNAMES */ '366': function(from, to, where) {
+        /* RPL_ENDOFNAMES */ '366': function(raw, from, to, where) {
             var namesCache = this._cache['names']||[];
             var names = namesCache[where]||[];
             this.emit('names', where, names);
             if (this._cache['names'] && this._cache['names'][where]) delete this._cache['names'][where];
         },
-        /* RPL_NOTOPIC */ '331': function(from, to, where, topic) {
-            this.emit('topic', where, null);
+        /* RPL_NOTOPIC */ '331': function(raw, from, to, where, topic) {
+            this.emit('topic', where, null, null, raw);
         },
-        /* RPL_TOPIC */ '332': function(from, to, where, topic) {
-            this.emit('topic', where, topic);
+        /* RPL_TOPIC */ '332': function(raw, from, to, where, topic) {
+            this.emit('topic', where, topic, null, raw);
         },
-        /* RPL_LINKCHANNEL */ '470': function(from, to, original, redirect) {
+        /* RPL_LINKCHANNEL */ '470': function(raw, from, to, original, redirect) {
             this.emit('redirected', to, original, redirect);
         },
-        /* RPL_TOPICWHOTIME */ '333': function(from, to, where, who, timestamp) {
+        /* RPL_TOPICWHOTIME */ '333': function(raw, from, to, where, who, timestamp) {
             var identity = parseIdentity(who);
             this.emit('topicinfo', where, identity.nick, timestamp);
         },
-        'PING': function(from) {
+        'PING': function(raw, from) {
             this._socket.write('PONG :' + from + '\r\n');
         },
         // Client messages
-        'MODE': function(who, target, modes, mask) {
+        'MODE': function(raw, who, target, modes, mask) {
             var identity = parseIdentity(who);
-            this.emit('mode', identity.nick, target, modes, mask);
+            this.emit('mode', identity.nick, target, modes, mask, raw);
         },
-        'TOPIC': function(who, channel, topic) {
+        'TOPIC': function(raw, who, channel, topic) {
             var identity = parseIdentity(who);
-            this.emit('topic', channel, topic, identity.nick);
+            this.emit('topic', channel, topic, identity.nick, raw);
         },
-        'PRIVMSG': function(from, to, message) {
+        'PRIVMSG': function(raw, from, to, message) {
             var identity = parseIdentity(from);
-            this.emit('privmsg', identity.nick, to, message);
+            this.emit('privmsg', identity.nick, to, message, raw);
         },
-        'NOTICE': function(from, to, message) {
+        'NOTICE': function(raw, from, to, message) {
             var identity = parseIdentity(from);
-            this.emit('notice', identity.nick, to, message);
+            this.emit('notice', identity.nick, to, message, raw);
         },
-        'JOIN': function(who, channel) {
+        'JOIN': function(raw, who, channel) {
             var identity = parseIdentity(who);
-            this.emit('join', identity.nick, channel);
+            this.emit('join', identity.nick, channel, raw);
         },
-        'KICK': function(who, where, target, why) {
+        'KICK': function(raw, who, where, target, why) {
             var identity = parseIdentity(who);
-            this.emit('kick', identity.nick, where, target, why);
+            this.emit('kick', identity.nick, where, target, why, raw);
         },
-        'NICK': function(from, data) {
+        'NICK': function(raw, from, data) {
             // :Angel!foo@bar NICK newnick
             var identity = parseIdentity(from);
             var data = data.match(/:?(.*)/);
             if (!data) throw 'invalid NICK structure';
-            this.emit('nick', identity.nick, data[1]);
+            this.emit('nick', identity.nick, data[1], raw);
         },
-        'PART': function(who, where) {
+        'PART': function(raw, who, where) {
             var identity = parseIdentity(who);
-            this.emit('part', identity.nick, where);
+            this.emit('part', identity.nick, where, raw);
         },
-        'QUIT': function(who, message) {
+        'QUIT': function(raw, who, message) {
             var identity = parseIdentity(who);
-            this.emit('quit', identity.nick, message);
+            this.emit('quit', identity.nick, message, raw);
         },
-        'CTCP_PRIVMSG_PING': function(from, to, data) {
+        'CTCP_PRIVMSG_PING': function(raw, from, to, data) {
             var identity = parseIdentity(from);
             this.emit('ping', identity.nick);
             this._socket.write('NOTICE ' + identity.nick + ' :\1PING ' + data + '\1\r\n');
         },
-        'CTCP_NOTICE_PING': function(from, to, data) {
+        'CTCP_NOTICE_PING': function(raw, from, to, data) {
             var identity = parseIdentity(from);
             this.emit('ping-reply', identity.nick, Date.now() - Number(data));
         },
@@ -428,7 +428,7 @@ private(IRC.prototype, {
         if (matches) {
             var handler = this._messageHandlers['CTCP_' + matches[2] + '_' + matches[4]];
             if (typeof handler !== 'undefined') {
-                handler.call(this, matches[1], matches[3], matches[5]);
+                handler.call(this, line, matches[1], matches[3], matches[5]);
             }
             else {
                 this._debug(2, 'Unhandled ctcp: ' + line);
@@ -438,7 +438,7 @@ private(IRC.prototype, {
         matches = line.match(/(?::([^\s]*)\s)?([^:]{1}[^\s]*)(?:\s([^:=*@]{1}[^\s]*))?(?:\s([^:=*@]{1}[^\s]*))?(?:\s(?:[@=*]\s)?([^:]{1}[^\s]*))?(?:\s:?(.*))?/);
         if (matches) {
             var handler = this._messageHandlers[matches[2]];
-            var args = [];
+            var args = [line];
             if (typeof handler == 'function') {
                 for (var i = 1; i < matches.length; ++i) {
                     if (i != 2 && typeof matches[i] != 'undefined') args.push(matches[i]);
