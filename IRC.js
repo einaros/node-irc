@@ -98,7 +98,7 @@ public(IRC.prototype, {
                     return true;
                 }
             }.bind(this),
-            'errorcode': function(code, to, regarding, reason) {
+            'errorcode': function(code, to, reason) {
                 if (['ERR_BANNEDFROMCHAN', 'ERR_INVITEONLYCHAN', 'ERR_BADCHANNELKEY',
                      'ERR_CHANNELISFULL', 'ERR_BADCHANMASK', 'ERR_NOSUCHCHANNEL',
                      'ERR_TOOMANYCHANNELS'].has(code)) {
@@ -248,7 +248,7 @@ public(IRC.prototype, {
     },
     quit: function(message) {
         this._socket.write('QUIT :' + message + '\r\n');
-        this._socket.close();
+        this._socket.end();
     },
     // todo: move to setter
     setDebugLevel: function(level) {
