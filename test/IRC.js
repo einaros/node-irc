@@ -607,6 +607,25 @@ describe('IRC', function() {
     data(':irc.homelien.no 366 muppetty #foobartest :End of /NAMES list.\r\n');
     assert.ok(eventEmitted);
   });
+  it('whois calls callback when whois is done', function() {
+    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var irc = new IRC(obj);
+    irc._username = 'foomeh';
+    var eventEmitted = false;
+    irc.whois('foomeh', function(error, whois) {
+      eventEmitted = true;
+      assert.ok(!error);
+      assert.equal(['#fooofooofoo3', '#fooofooofoo2', '#fooofooofoo1'].sort().join(', '), whois.channels.sort().join(', '));
+    });
+    var data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
+    data(':asimov.freenode.net 311 foomeh foomeh ~ident getinternet.no * :my name yeah\r\n');
+    data(':asimov.freenode.net 319 foomeh foomeh :@#fooofooofoo3 @#fooofooofoo2 @#fooofooofoo1\r\n');
+    data(':asimov.freenode.net 312 foomeh foomeh asimov.freenode.net :TX, USA\r\n');
+    data(':asimov.freenode.net 378 foomeh foomeh :is connecting from *@getinternet.no 84.55.51.127\r\n');
+    data(':asimov.freenode.net 317 foomeh foomeh 8 1333646400 :seconds idle, signon time\r\n');
+    data(':asimov.freenode.net 318 foomeh foomeh :End of /WHOIS list.\r\n');
+    assert.ok(eventEmitted);
+  });
   it('mode +i on channel sends mode command to server', function() {
     var obj = fake(['on', 'setEncoding', 'connect', 'write']);
     var irc = new IRC(obj);

@@ -188,8 +188,52 @@ public(IRC.prototype, {
         queue.inProgress += 1;
         if (queue.inProgress > 1) {
             queue.pending.push(handler);
-        } else handler();
+        }
+        else handler();
     },
+
+    whois: function(nick, callback) {
+        var handler = function() {
+            this._socket.write('WHOIS ' + nick + '\r\n');
+            this._queueEventPreInterceptor({
+                'whois': function(who, whois) {
+                    this._callQueue.whois.inProgress -= 1;;
+                    var handled = false;
+                    if (nick == who) {
+                        if (typeof callback == 'function') callback(undefined, whois);
+                        handled = true;
+                    }
+                    if (this._callQueue.whois.pending.length > 0) {
+                        this._callQueue.whois.pending.shift()();
+                    }
+                    return handled;
+                }.bind(this),
+                'errorcode': function(code, to, regarding, reason) {
+                    if (['ERR_NOSUCHSERVER', 'ERR_NONICKNAMEGIVEN',
+                         'RPL_WHOISUSER', 'RPL_WHOISCHANNELS',
+                         'RPL_WHOISCHANNELS', 'RPL_WHOISSERVER',
+                         'RPL_AWAY', 'RPL_WHOISOPERATOR',
+                         'RPL_WHOISIDLE', 'ERR_NOSUCHNICK',
+                         'RPL_ENDOFWHOIS'].has(code)) {
+                        if (typeof cb == 'function') cb(reason);
+                        return true;
+                    }
+                    else if (code == 'ERR_NEEDMOREPARAMS' &&
+                             regarding == 'JOIN') {
+                        if (typeof cb == 'function') cb(reason);
+                        return true;
+                    }
+                }
+            });
+        }.bind(this);
+        var queue = this._callQueue.whois = this._callQueue.whois || { inProgress: 0, pending: [] };
+        queue.inProgress += 1;
+        if (queue.inProgress > 1) {
+            queue.pending.push(handler);
+        }
+        else handler();
+    },
+
     nick: function(newnick, callback) {
         this._socket.write('NICK ' + newnick + '\r\n');
         this._queueEventPreInterceptor({
@@ -346,7 +390,7 @@ private(IRC.prototype, {
         /* RPL_ENDOFMOTD */ '376': function(raw, from, text) {
             return this._messageHandlers['372'].apply(this, arguments);
         },
-        /* RPL_NAMRPLY */ '353': function(raw, from, to, where, names) {
+        /* RPL_NAMRPLY */ '353': function(raw, from, to, type, where, names) {
             this._cache['names'] = this._cache['names'] || {};
             this._cache['names'][where] = (this._cache['names'][where] || []).concat(names.split(' '));
         },
@@ -355,6 +399,25 @@ private(IRC.prototype, {
             var names = namesCache[where]||[];
             this.emit('names', where, names);
             if (this._cache['names'] && this._cache['names'][where]) delete this._cache['names'][where];
+        },
+        /* RPL_WHOISUSER */ '311': function(raw, from, to, nick, ident, host, noop, realname) {
+            this._cache['whois'] = this._cache['whois'] || {};
+            var whois = this._cache['whois'][nick] = (this._cache['whois'][nick] || {});
+            whois.nick = nick;
+            whois.ident = ident;
+            whois.host = host;
+            whois.realname = realname;
+        },
+        /* RPL_WHOISCHANNELS */ '319': function(raw, from, to, nick, channels) {
+            this._cache['whois'] = this._cache['whois'] || {};
+            var whois = this._cache['whois'][nick] = (this._cache['whois'][nick] || {});
+            whois.channels = (whois.channels || []).concat(channels.replace(/[\+@]([#&])/g, '$1').split(' '));
+        },
+        /* RPL_ENDOFWHOIS */ '318': function(raw, from, to, nick) {
+            this._cache['whois'] = this._cache['whois'] || {};
+            var whois = this._cache['whois'][nick] = (this._cache['whois'][nick] || {});
+            this.emit('whois', nick, whois);
+            if (this._cache['whois'] && this._cache['whois'][nick]) delete this._cache['whois'][nick];
         },
         /* RPL_NOTOPIC */ '331': function(raw, from, to, where, topic) {
             this.emit('topic', where, null, null, raw);
@@ -426,6 +489,8 @@ private(IRC.prototype, {
     _processServerMessage: function(line) {
         this._debug(4, 'Incoming: ' + line);
         this.emit('raw', line);
+
+        // ctcp handling should be rewritten
         var matches = line.match(/^:([^\s]*)\s([^\s]*)\s([^\s]*)\s:\u0001([^\s]*)\s(.*)\u0001/);
         if (matches) {
             var handler = this._messageHandlers['CTCP_' + matches[2] + '_' + matches[4]];
@@ -437,30 +502,26 @@ private(IRC.prototype, {
             }
             return;
         }
-        matches = line.match(/(?::([^\s]*)\s)?([^:]{1}[^\s]*)(?:\s([^:=*@]{1}[^\s]*))?(?:\s([^:=*@]{1}[^\s]*))?(?:\s(?:[@=*]\s)?([^:]{1}[^\s]*))?(?:\s:?(.*))?/);
-        if (matches) {
-            var handler = this._messageHandlers[matches[2]];
-            var args = [line];
-            if (typeof handler == 'function') {
-                for (var i = 1; i < matches.length; ++i) {
-                    if (i != 2 && typeof matches[i] != 'undefined') args.push(matches[i]);
-                }
-                handler.apply(this, args);
-            }
-            else if (typeof handler == 'string') {
-                for (var i = 1; i < matches.length; ++i) {
-                    if (i != 2 && typeof matches[i] != 'undefined') args.push(matches[i]);
-                }
-                args.unshift(handler);
-                this._errorHandler.apply(this, args);
-            }
-            else {
-                this._debug(2, 'Unhandled msg: ' + line);
-            }
-            return;
+
+        // anything other than ctcp
+        var parts = line.trim().split(/ :/)
+          , args = parts[0].split(' ');
+        if (parts.length > 0) args.push(parts[1]);
+        if (line.match(/^:/)) {
+            args[1] = args.splice(0, 1, args[1]);
+            args[1] = (args[1] + '').replace(/^:/, '');
         }
-        // Unknown
-        this._debug(2, 'Unhandled server data: ' + line);
+        var command = args[0].toUpperCase();
+        args = args.slice(1);
+        args.unshift(line);
+
+        var handler = this._messageHandlers[command];
+        if (typeof handler == 'function') handler.apply(this, args);
+        else if (typeof handler == 'string') {
+            args.unshift(handler);
+            this._errorHandler.apply(this, args);
+        }
+        else this._debug(2, 'Unhandled msg: ' + line);
     }
 });
 exports.IRC = IRC;
