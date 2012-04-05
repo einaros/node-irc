@@ -402,6 +402,7 @@ private(IRC.prototype, {
             var identity = parseIdentity(from);
             var data = data.match(/:?(.*)/);
             if (!data) throw 'invalid NICK structure';
+            if (from == this._username) this._username = newnick;
             this.emit('nick', identity.nick, data[1], raw);
         },
         'PART': function(raw, who, where) {
