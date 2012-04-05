@@ -424,6 +424,7 @@ private(IRC.prototype, {
     },
     _processServerMessage: function(line) {
         this._debug(4, 'Incoming: ' + line);
+        this.emit('raw', line);
         var matches = line.match(/^:([^\s]*)\s([^\s]*)\s([^\s]*)\s:\u0001([^\s]*)\s(.*)\u0001/);
         if (matches) {
             var handler = this._messageHandlers['CTCP_' + matches[2] + '_' + matches[4]];
