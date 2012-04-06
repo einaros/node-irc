@@ -1,39 +1,36 @@
 var IRC = require('./IRC').IRC;
 var irc = new IRC('irc.freenode.net', 6667);
-irc.setDebugLevel(4);
+irc.on('raw', function(data) { console.log(data); });
+irc.setDebugLevel(1);
 irc.on('connected', function(server) {
     console.log('connected to ' + server);
     irc.join('#foobartest', function(error) {
-        if (error) {
-            console.log('error joining channel: ' + error);
-            return;
-        }
-        // irc.privmsg('#foobartest', 'well hello yall');
-        // irc.nick('muppetty2', function(old, newn) {
-        //     irc.privmsg('#foobartest', 'I\'m new!');
-        // });
+        irc.privmsg('#foobartest', 'well hello yall');
+        irc.nick('muppetty2', function(old, newn) {
+            irc.privmsg('#foobartest', 'I\'m new!');
+        });
     });
 });
 irc.on('topic', function(where, topic) {
     console.log('topic of ' + where + ': ' + topic);
 });
-irc.on('join', function(who, where) {
-    console.log(who + ' joined ' + where);
-    if (where == '#foobartest' && who != irc.whoami()) {
-        irc.kick(where, who, 'woot', function(error) {
-            if (error) {
-                console.log('error kicking user: ' + error);
-                return;
-            }
-            irc.mode(where, '+b', who + '!*@*', function(error) {
-                if (error) {
-                    console.log('error banning user: ' + error);
-                    return;
-                }
-            });
-        });
-    }
-});
+// irc.on('join', function(who, where) {
+//     console.log(who + ' joined ' + where);
+//     if (where == '#foobartest' && who != irc.whoami()) {
+//         irc.kick(where, who, 'woot', function(error) {
+//             if (error) {
+//                 console.log('error kicking user: ' + error);
+//                 return;
+//             }
+//             irc.mode(where, '+b', who + '!*@*', function(error) {
+//                 if (error) {
+//                     console.log('error banning user: ' + error);
+//                     return;
+//                 }
+//             });
+//         });
+//     }
+// });
 irc.on('quit', function(who, message) {
     console.log(who + ' quit: ' + message);
 });
@@ -66,10 +63,10 @@ irc.on('ping-reply', function(from, ms) {
 });
 irc.on('errorcode', function(code) {
     if (code == 'ERR_NICKNAMEINUSE') {
-        irc.nick('einaros');
+        irc.nick('foomeh2');
     }
 });
-irc.connect('einaros', 'my name yeah', 'ident');
+irc.connect('foomeh', 'my name yeah', 'ident');
 process.on('exit', function () {
     irc.quit('bye');
 });
