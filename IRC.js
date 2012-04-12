@@ -5,7 +5,7 @@ var events = require('events');
 var private = require('./lib/proto').private;
 var public = require('./lib/proto').public;
 
-function IRC(server, port) {
+function IRC(server, port, password) {
     events.EventEmitter.call(this);
     if (typeof server == 'object') {
         private(this, {_socket: server}, true);
@@ -41,6 +41,7 @@ function IRC(server, port) {
     }
     this._socket.setEncoding('ascii');
     this._socket.on('connect', function() {
+        if (typeof password != 'undefined') this._socket.write('PASS ' + password + '\r\n');
         this._socket.write('NICK ' + this._username + '\r\n');
         this._socket.write('USER ' + this._ident + ' host server :' + this._realname + '\r\n');
     }.bind(this));
