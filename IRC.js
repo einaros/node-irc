@@ -288,6 +288,9 @@ public(IRC.prototype, {
     privmsg: function(to, message) {
         this._socket.write('PRIVMSG ' + to + ' :' + message + '\r\n');
     },
+    notice: function(to, message) {
+        this._socket.write('NOTICE ' + to + ' :' + message + '\r\n');
+    },
     raw: function(message) {
         this._socket.write(message + '\r\n');
     },
