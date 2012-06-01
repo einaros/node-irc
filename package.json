@@ -1,5 +1,5 @@
 {
-    "name": "node-irc",
+    "name": "irc.js",
     "version": "0.1.0",
     "description": "IRC client library",
     "author": "Einar Otto Stangvik <einaros@gmail.com>",
