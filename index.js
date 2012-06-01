@@ -1,1 +1,1 @@
-module.exporte = require('./IRC').IRC;
+module.exports = require('./IRC').IRC;
