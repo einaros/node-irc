@@ -39,6 +39,8 @@ function IRC(server, port, password) {
         var retVal = realEmit.apply(this, arguments);
         return retVal;
     }
+    this._socket.setTimeout(0);
+    this._socket.setKeepAlive(true, 10000);
     this._socket.setEncoding('ascii');
     this._socket.on('connect', function() {
         if (typeof password != 'undefined') this._socket.write('PASS ' + password + '\r\n');
@@ -52,9 +54,14 @@ function IRC(server, port, password) {
     }.bind(this));
     this._socket.on('end', function() {
         this._debug(3, 'Server socket end');
+        this._socket.end();
     }.bind(this));
     this._socket.on('error', function(exception) {
         this._debug(1, 'Server socket error', exception);
+    }.bind(this));
+    this._socket.on('timeout', function(exception) {
+        this._debug(1, 'Server socket timeout', exception);
+        this._socket.end();
     }.bind(this));
     var overflow = '';
     this._socket.on('data', function(data) {
