@@ -1,6 +1,6 @@
 {
     "name": "irc.js",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "description": "IRC client library",
     "author": "Einar Otto Stangvik <einaros@gmail.com>",
     "repository": "git://github.com/einaros/node-irc.git",
