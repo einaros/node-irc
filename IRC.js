@@ -497,7 +497,7 @@ private(IRC.prototype, {
         },
         'CTCP_PRIVMSG_ACTION': function(raw, from, to, data) {
             var identity = parseIdentity(from);
-            this.emit('action', identity.nick, to, data);
+            this.emit('action', identity.nick, to, data, raw);
         },
     },
     _processServerMessage: function(line) {
