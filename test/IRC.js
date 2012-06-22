@@ -3,9 +3,13 @@ var assert = require('assert');
 var fake = require('../lib/fake').fake;
 var IRC = require('../IRC').IRC;
 
+function fakeSocket() {
+  return fake(['on', 'setEncoding', 'connect', 'write', 'setTimeout', 'setKeepAlive']);
+}
+
 describe('IRC', function() {
   it('connect attempts to set proper encoding and establish socket connection', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     irc.connect('undefined');
     assert.equal(1, obj.connect.history.length);
@@ -13,7 +17,7 @@ describe('IRC', function() {
     assert.equal('ascii', obj.setEncoding.history[0][0]);
   });
   it('handles chunked data', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     var eventEmitted = false;
     irc.on('privmsg', function(from, to, message) {
@@ -28,7 +32,7 @@ describe('IRC', function() {
     assert.ok(eventEmitted);
   });
   it('incoming RPL_WELCOME causes connected event and nick sync', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     irc.connect('this is not a valid nickname');
     var eventEmitted = false;
@@ -42,7 +46,7 @@ describe('IRC', function() {
     assert.equal('this', irc.whoami());
   });
   it('repeated incoming RPL_WELCOME does not cause connected event', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     irc.connect('this is not a valid nickname');
     var eventEmitted = 0;
@@ -56,7 +60,7 @@ describe('IRC', function() {
     assert.equal(1, eventEmitted);
   });
   it('connection close causes close event', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     irc.connect('this is not a valid nickname');
     var eventEmitted = false;
@@ -72,7 +76,7 @@ describe('IRC', function() {
     assert.ok(eventEmitted);
   });
   it('incoming RPL_WELCOME after disconnect causes connected event and nick sync', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     irc.connect('this is not a valid nickname');
     var eventEmitted = false;
@@ -90,7 +94,7 @@ describe('IRC', function() {
     assert.ok(eventEmitted);
   });
   it('incoming privmsg causes privmsg event', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     var eventEmitted = false;
     irc.on('privmsg', function(from, to, message) {
@@ -104,7 +108,7 @@ describe('IRC', function() {
     assert.ok(eventEmitted);
   });
   it('incoming connection notice causes notice event', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     var eventEmitted = false;
     irc.on('notice', function(from, to, message) {
@@ -118,7 +122,7 @@ describe('IRC', function() {
     assert.ok(eventEmitted);
   });
   it('incoming notice causes notice event', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     var eventEmitted = false;
     irc.on('notice', function(from, to, message) {
@@ -132,7 +136,7 @@ describe('IRC', function() {
     assert.ok(eventEmitted);
   });
   it('incoming topic causes topic event', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     var eventEmitted = false;
     irc.on('topic', function(where, topic, who) {
@@ -146,7 +150,7 @@ describe('IRC', function() {
     assert.ok(eventEmitted);
   });
   it('incoming join causes join event', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     var eventEmitted = false;
     irc.on('join', function(who, where) {
@@ -159,7 +163,7 @@ describe('IRC', function() {
     assert.ok(eventEmitted);
   });
   it('incoming join causes join event when the user is "self", which would be the case for psybnc', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     irc._username = 'foo';
     var eventEmitted = false;
@@ -174,7 +178,7 @@ describe('IRC', function() {
     assert.ok(eventEmitted);
   });
   it('incoming nick causes nick event', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     var eventEmitted = false;
     irc.on('nick', function(oldnick, newnick) {
@@ -187,7 +191,7 @@ describe('IRC', function() {
     assert.ok(eventEmitted);
   });
   it('incoming quit causes quit event', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     var eventEmitted = false;
     irc.on('quit', function(who, message) {
@@ -200,7 +204,7 @@ describe('IRC', function() {
     assert.ok(eventEmitted);
   });
   it('incoming part causes part event', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     var eventEmitted = false;
     irc.on('part', function(who, where) {
@@ -213,7 +217,7 @@ describe('IRC', function() {
     assert.ok(eventEmitted);
   });
   it('incoming kick causes kick event', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     var eventEmitted = false;
     irc.on('kick', function(who, where, target, message) {
@@ -228,7 +232,7 @@ describe('IRC', function() {
     assert.ok(eventEmitted);
   });
   it('incoming mode causes mode event', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     var eventEmitted = false;
     irc.on('mode', function(who, target, modes, mask) {
@@ -243,7 +247,7 @@ describe('IRC', function() {
     assert.ok(eventEmitted);
   });
   it('incoming RPL_TOPIC causes topic event', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     var eventEmitted = false;
     irc.on('topic', function(where, topic) {
@@ -256,7 +260,7 @@ describe('IRC', function() {
     assert.ok(eventEmitted);
   });
   it('incoming RPL_NOTOPIC causes topic event', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     var eventEmitted = false;
     irc.on('topic', function(where, topic) {
@@ -269,7 +273,7 @@ describe('IRC', function() {
     assert.ok(eventEmitted);
   });
   it('incoming RPL_TOPICWHOTIME causes topicage event', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     var eventEmitted = false;
     irc.on('topicinfo', function(where, who, timestamp) {
@@ -283,7 +287,7 @@ describe('IRC', function() {
     assert.ok(eventEmitted);
   });
   it('incoming user mode causes mode event', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     var eventEmitted = false;
     irc.on('mode', function(who, target, modes, mask) {
@@ -297,7 +301,7 @@ describe('IRC', function() {
     assert.ok(eventEmitted);
   });
   it('incoming names list causes names event', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     var eventEmitted = false;
     irc.on('names', function(where, names) {
@@ -312,14 +316,14 @@ describe('IRC', function() {
     assert.ok(eventEmitted);
   });
   it('incoming server ping causes pong', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     var data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
     data('PING :irc.foo.bar\r\n');
     assert.equal('PONG :irc.foo.bar\r\n', obj.write.history.last()[0]);
   });
   it('incoming ctcp ping causes ping event', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     var eventEmitted = false;
     irc.on('ping', function(from) {
@@ -332,7 +336,7 @@ describe('IRC', function() {
     assert.ok(obj.write.history.last()[0].match(/NOTICE foo :\u0001PING 1234 4321\u0001\r\n/));
   });
   it('incoming ctcp ping reply causes ping-reply event', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     var eventEmitted = false;
     var when = Date.now();
@@ -345,8 +349,22 @@ describe('IRC', function() {
     data(':foo NOTICE bar :\u0001PING ' + when + '\u0001\r\n');
     assert.ok(eventEmitted);
   });
+  it('incoming ctcp action causes action event', function() {
+    var obj = fakeSocket();
+    var irc = new IRC(obj);
+    var eventEmitted = false;
+    irc.on('action', function(from, to, action) {
+      eventEmitted = true;
+      assert.equal('foo', from);
+      assert.equal('#bar', to);
+      assert.equal('is a baz', action);
+    });
+    var data = obj.on.history.filter(function(args) { return args[0] == 'data'; }).map(function(args) { return args[1]; })[0];
+    data(':foo PRIVMSG #bar :\1ACTION is a baz\1\r\n');
+    assert.ok(eventEmitted);
+  });
   it('incoming RPL_MOTDSTART message causes servertext event', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     var eventEmitted = false;
     irc.on('servertext', function(from, to, text) {
@@ -360,7 +378,7 @@ describe('IRC', function() {
     assert.ok(eventEmitted);
   });
   it('incoming RPL_MOTD message causes servertext event', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     var eventEmitted = false;
     irc.on('servertext', function(from, to, text) {
@@ -374,7 +392,7 @@ describe('IRC', function() {
     assert.ok(eventEmitted);
   });
   it('incoming RPL_ENDOFMOTD message causes servertext event', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     var eventEmitted = false;
     irc.on('servertext', function(from, to, text) {
@@ -385,7 +403,7 @@ describe('IRC', function() {
     assert.ok(eventEmitted);
   });
   it('incoming ERR_NICKNAMEINUSE causes error event', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     irc._username = 'foo';
     var eventEmitted = false;
@@ -402,7 +420,7 @@ describe('IRC', function() {
     assert.ok(eventEmitted);
   });
   it('incoming ERR_NONICKNAMEGIVEN causes error event', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     irc._username = 'foo';
     var eventEmitted = false;
@@ -418,37 +436,37 @@ describe('IRC', function() {
     assert.ok(eventEmitted);
   });
   it('ping sends ctcp ping command to server', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     irc.ping('foo');
     assert.ok(obj.write.history.last()[0].match(/^PRIVMSG foo :\u0001PING [0-9\s]*\u0001\r\n/));
   });
   it('privmsg sends privmsg command to server', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     irc.privmsg('foo', 'hi there!');
     assert.ok(obj.write.history.last()[0].match(/^PRIVMSG foo :hi there!\r\n/));
   });
   it('notice sends notice command to server', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     irc.notice('foo', 'hi there!');
     assert.ok(obj.write.history.last()[0].match(/^NOTICE foo :hi there!\r\n/));
   });
   it('raw sends raw command to server', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     irc.raw('privmsg foo :bar!');
     assert.ok(obj.write.history.last()[0].match(/^privmsg foo :bar!\r\n/));
   });
   it('join sends join command to server', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     irc.join('#testorama');
     assert.ok(obj.write.history.last()[0].match(/^JOIN #testorama\r\n/));
   });
   it('join calls callback when joins is done', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     irc._username = 'foo';
     var eventEmitted = false;
@@ -462,7 +480,7 @@ describe('IRC', function() {
     assert.equal(0, irc.listeners('join').length);
   });
   it('join calls callback when joins is redirected, and that join is done', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     irc._username = 'foo';
     var eventEmitted = false;
@@ -478,7 +496,7 @@ describe('IRC', function() {
     assert.equal(0, irc.listeners('join').length);
   });
   it('join calls callback when join is blocked due to ban', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     irc._username = 'foo';
     var eventEmitted = false;
@@ -492,14 +510,14 @@ describe('IRC', function() {
     assert.equal(0, irc.listeners('join').length);
   });
   it('kick sends kick command to server', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     irc._username = 'foo';
     irc.kick('#testorama', 'bar', 'some message');
     assert.ok(obj.write.history.last()[0].match(/^KICK #testorama bar :some message\r\n/));
   });
   it('kick calls callback when kick is done', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     irc._username = 'foo';
     var eventEmitted = false;
@@ -512,7 +530,7 @@ describe('IRC', function() {
     assert.ok(eventEmitted);
   });
   it('kick calls callback indicating error when op is needed', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     irc._username = 'foo';
     var eventEmitted = false;
@@ -525,13 +543,13 @@ describe('IRC', function() {
     assert.ok(eventEmitted);
   });
   it('nick sends nick command to server', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     irc.nick('bar');
     assert.ok(obj.write.history.last()[0].match(/^NICK bar\r\n/));
   });
   it('nick calls callback when nick change is done', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     irc._username = 'foo';
     var eventEmitted = false;
@@ -547,7 +565,7 @@ describe('IRC', function() {
     assert.equal('bar', irc.whoami());
   });
   it('nick calls callback indicating error when nick change yields nick_in_use', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     irc._username = 'foo';
     var eventEmitted = false;
@@ -560,7 +578,7 @@ describe('IRC', function() {
     assert.ok(eventEmitted);
   });
   it('nick callbacks will stack, not execute in parallell', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     irc._username = 'foo';
     var eventEmitted = 0;
@@ -582,13 +600,13 @@ describe('IRC', function() {
     assert.equal(2, eventEmitted);
   });
   it('names sends names command to server', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     irc.names('#test');
     assert.ok(obj.write.history.last()[0].match(/^NAMES #test\r\n/));
   });
   it('names queue names command until previous call completes', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     irc.names('#test');
     irc.names('#test');
@@ -599,7 +617,7 @@ describe('IRC', function() {
     assert.ok(obj.write.history.last()[0].match(/^NAMES #test\r\n/));
   });
   it('names calls callback when name listing is done', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     var eventEmitted = false;
     irc.names('#foobartest', function(error, names) {
@@ -614,7 +632,7 @@ describe('IRC', function() {
     assert.ok(eventEmitted);
   });
   it('whois calls callback when whois is done', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     irc._username = 'foomeh';
     var eventEmitted = false;
@@ -633,13 +651,13 @@ describe('IRC', function() {
     assert.ok(eventEmitted);
   });
   it('mode +i on channel sends mode command to server', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     irc.mode('#test', '+i');
     assert.ok(obj.write.history.last()[0].match(/^MODE #test \+i\r\n/));
   });
   it('mode +i on channel calls callback when mode is set', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     irc._username = 'foo';
     var eventEmitted = false;
@@ -652,13 +670,13 @@ describe('IRC', function() {
     assert.ok(eventEmitted);
   });
   it('mode +b user!ident@host on channel sends mode command to server', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     irc.mode('#test', '+b', 'user!ident@host');
     assert.ok(obj.write.history.last()[0].match(/^MODE #test \+b user!ident@host\r\n/));
   });
   it('mode +b user!ident@host on channel calls callback when mode is set', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     irc._username = 'foo';
     var eventEmitted = false;
@@ -671,13 +689,13 @@ describe('IRC', function() {
     assert.ok(eventEmitted);
   });
   it('part sends part command to server', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     irc.part('#test');
     assert.ok(obj.write.history.last()[0].match(/^PART #test\r\n/));
   });
   it('part calls callback when part is done', function() {
-    var obj = fake(['on', 'setEncoding', 'connect', 'write']);
+    var obj = fakeSocket();
     var irc = new IRC(obj);
     irc._username = 'baz';
     var eventEmitted = false;

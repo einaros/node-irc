@@ -39,7 +39,6 @@ function IRC(server, port, password) {
         var retVal = realEmit.apply(this, arguments);
         return retVal;
     }
-    this._socket.setTimeout(0);
     this._socket.setKeepAlive(true, 10000);
     this._socket.setEncoding('ascii');
     this._socket.on('connect', function() {
@@ -495,6 +494,10 @@ private(IRC.prototype, {
         'CTCP_NOTICE_PING': function(raw, from, to, data) {
             var identity = parseIdentity(from);
             this.emit('ping-reply', identity.nick, Date.now() - Number(data));
+        },
+        'CTCP_PRIVMSG_ACTION': function(raw, from, to, data) {
+            var identity = parseIdentity(from);
+            this.emit('action', identity.nick, to, data);
         },
     },
     _processServerMessage: function(line) {
