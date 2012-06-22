@@ -21,7 +21,8 @@ function IRC(server, port, password) {
        _callQueue: {},
        _eventPreInterceptorMap: {},
        _debugLevel: 2,
-       _connected: false
+       _connected: false,
+       _keepAliveTimer: -1
     }, true);
     var realEmit = this.emit;
     this.emit = function(event) {
@@ -39,7 +40,7 @@ function IRC(server, port, password) {
         var retVal = realEmit.apply(this, arguments);
         return retVal;
     }
-    this._socket.setKeepAlive(true, 10000);
+    this._socket.setTimeout(false);
     this._socket.setEncoding('ascii');
     this._socket.on('connect', function() {
         if (typeof password != 'undefined') this._socket.write('PASS ' + password + '\r\n');
@@ -48,6 +49,8 @@ function IRC(server, port, password) {
     }.bind(this));
     this._socket.on('close', function(had_error) {
         this._debug(3, 'Server socket closed');
+        this._stopKeepAlive();
+        this._eventPreInterceptorMap = {};
         this._connected = false;
         this.emit('disconnected');
     }.bind(this));
@@ -310,6 +313,18 @@ public(IRC.prototype, {
     }
 });
 private(IRC.prototype, {
+    _startKeepAlive: function(server) {
+        if (this._keepAliveTimer != -1) this._stopKeepAlive();
+        var self = this;
+        this._keepAliveTimer = setInterval(function() {
+            self._socket.write('PING ' + server + '\r\n');
+        }, 60000);
+    },
+    _stopKeepAlive: function() {
+        if (this._keepAliveTimer == -1) return;
+        clearInterval(this._keepAliveTimer);
+        this._keepAliveTimer = -1;
+    },
     _debug: function(level, text, data) {
         if (level <= this._debugLevel) {
             console.log(text);
@@ -390,6 +405,7 @@ private(IRC.prototype, {
             if (this._connected) return;
             this._connected = true;
             this.emit('connected', text);
+            this._startKeepAlive(from);
         },
         /* RPL_MOTDSTART */ '375': function(raw) {
             return this._messageHandlers['372'].apply(this, arguments);
@@ -444,6 +460,8 @@ private(IRC.prototype, {
         },
         'PING': function(raw, from) {
             this._socket.write('PONG :' + from + '\r\n');
+        },
+        'PONG': function(raw, from) {
         },
         // Client messages
         'MODE': function(raw, who, target, modes, mask) {
